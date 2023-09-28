@@ -8,11 +8,6 @@
 
 ---@alias frames number
 
----@class Monoid
----@field t frames Time to death
----@field f fun(s:Monoid) Change function for Monoid
----@field kf fun() Kill function, ran before death
-
 ---@class Entity
 ---@field name string
 ---@field vec {x: number, y:number}
@@ -94,25 +89,101 @@ function TIC()
 	local frequency=.03
 
 	if up then
-		MonoidFactory:pushTo(Screen,duration,'y',-amplitude,frequency)
+		Factory:pushTo(Screen,duration,'y',-amplitude,frequency)
 	end
 	if down then
-		MonoidFactory:pushTo(Screen,duration,'y',amplitude,frequency)
+		Factory:pushTo(Screen,duration,'y',amplitude,frequency)
 	end
 	if left then
-		MonoidFactory:pushTo(Screen,duration,'x',amplitude,frequency)
+		Factory:pushTo(Screen,duration,'x',amplitude,frequency)
 	end
 	if right then
-		MonoidFactory:pushTo(Screen,duration,'x',-amplitude,frequency)
+		Factory:pushTo(Screen,duration,'x',-amplitude,frequency)
 	end
 
-	MonoidFactory:run()
+	Factory:run()
 	Screen:update()
 
 	spr(1+F%60//30*2,W/2,H/2,14,3,0,0,2,2)
 	print("HELLO WORLD!",84,84)
 	F=F+1
 end
+
+---@class RunFunc
+---@field name string Name of the RunFunc
+---@field t frames Time to death
+---@field run fun(rf: RunFunc) Function runs every frame
+---@field kill fun() Function that runs right before death
+
+---@class Factory
+Factory={
+	---@type {[string]: RunFunc}
+	funcs={},
+	---@param s Factory
+	---@param name string
+	---@param t frames
+	---@param run fun()
+	---@param kill fun()
+	add=function(s,name,t,run,kill)
+		if s:has(name) then return end
+		s.funcs[name]={
+			name=name,
+			t=t,
+			---@param rf RunFunc
+			run=function (rf)
+				rf.t=rf.t-1
+				if rf.t>=0 then run()
+				else rf.kill() end
+			end,
+			kill=function ()
+				kill()
+				s:del(name)
+			end
+		}
+	end,
+	---@param s Factory
+	---@param name string
+	---@return boolean
+	has=function(s,name)
+		return s.funcs[name]~=nil
+	end,
+	---@param name string
+	del=function(s,name)
+		s.funcs[name]=nil
+	end,
+	---@param s Factory
+	run=function(s)
+		for _,rf in pairs(s.funcs) do
+			rf:run()
+		end
+	end,
+	---@param s Factory
+	---@param obj Entity
+	---@param t frames Shake duration
+	---@param i number Shake intensity
+	shake=function(s,obj,t,i)
+		s:add(obj.name..'_shake',t,function()
+			obj.vec.x=math.random(-i,i)
+			obj.vec.y=math.random(-i,i)
+		end,
+		function()
+			obj.vec=Vectic.zero()
+		end)
+	end,
+	---@param s Factory
+	---@param obj Entity
+	---@param t frames Push duration
+	---@param comp 'x'|'y' Vectic component to modify
+	pushTo=function(s,obj,t,comp,a,b)
+		local startF=F
+		s:add(obj.name..'_push',t,function()
+			obj.vec[comp]=a*math.sin(b*(F-startF))
+		end,
+		function()
+			obj.vec=Vectic.zero()
+		end)
+	end
+}
 
 ---@class Screen: Entity
 Screen={
@@ -135,65 +206,93 @@ Screen={
 	end
 }
 
----@class MonoidFactory
-MonoidFactory={
-	---@type {[string]: Monoid}
-	monoids={},
-	---@param mf MonoidFactory
-	---@param name string
-	---@param t frames Duration of monoid (in frames)
-	---@param f fun()
-	---@param kf fun() Kill function
-	gen=function(mf,name,t,f,kf)
-		if mf.monoids[name]~=nil then return end
-		---@type Monoid
-		local m={
-			t=t,
-			f=function(s)
-				s.t=s.t-1
-				f()
-			end,
-			kf=kf
-		}
-		mf.monoids[name]=m
+---@alias direction
+---| '"up"'
+---| '"down"'
+---| '"left"'
+---| '"right"'
+
+---@alias operation fun(a:number,b:number):number
+
+BaseOps={
+	---@type operation
+	sum=function(a,b) return a+b end,
+	---@type operation
+	sub=function(a,b) return a-b end,
+	---@type operation
+	mul=function(a,b) return a*b end,
+	---@type operation
+	div=function(a,b) return a/b end,
+	---@type operation
+	zer=function(a,b) return 0 end,
+}
+
+---@class Controls: Entity
+Controls={
+	name='game-controls',
+	x=W/2,
+	y=3*H/4,
+	---@type {[direction]:number}
+	buttons={},
+	numsE={
+		x=Controls.x - W/4,
+		y=Controls.y
+	},
+	nums=NumCtrl,
+	opsE={
+		x=Controls.x + W/4,
+		y=Controls.y
+	},
+	ops=OpCtrl,
+	run=function()
+
 	end,
-	---@param mf MonoidFactory
-	run=function(mf)
-		for name,m in pairs(mf.monoids) do
-			if m.t<0 then
-				mf.monoids[name]=nil
-				m.kf()
-			else m:f() end
-		end
-	end,
-	---@param mf MonoidFactory
-	---@param obj Entity
-	---@param t frames Shake duration
-	---@param i number Shake intensity
-	shake=function(mf,obj,t,i)
-		mf:gen(obj.name..'_shake',t,function()
-			obj.vec.x=math.random(-i,i)
-			obj.vec.y=math.random(-i,i)
-		end,
-		function()
-			obj.vec=Vectic.zero()
-		end)
-	end,
-	---@param mf MonoidFactory
-	---@param obj Entity
-	---@param t frames Push duration
-	---@param comp 'x'|'y' Vectic component to modify
-	pushTo=function(mf,obj,t,comp,a,b)
-		local startF=F
-		mf:gen(obj.name..'_push',t,function()
-			obj.vec[comp]=a*math.sin(b*(F-startF))
-		end,
-		function()
-			obj.vec=Vectic.zero()
-		end)
+	setup=function()
+
 	end
 }
 
+---@class OpCtrl
+OpCtrl={
+	---@type {[direction]:operation} Control directions (up down left right)
+	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
+}
+
+---@class NumCtrl
+NumCtrl={
+	---@type {[direction]:number} Control directions (up down left right)
+	dirs={up=0,down=0,left=0,right=0},
+	---@type {[direction]: {min:number, max:number}}
+	ranges={
+		up={min=1,max=9},
+		down={min=1,max=9},
+		left={min=1,max=9},
+		right={min=1,max=9}
+	},
+	---@param s NumCtrl
+	---@param dir direction
+	reGen=function(s,dir)
+		s.dirs[dir]=math.random(s.ranges[dir].min,s.ranges[dir].max)
+	end,
+	---Returns random direction
+	---@param s NumCtrl
+	---@return direction
+	randDir=function(s)
+		local pd={'up','down','left','right'}
+		return pd[math.random(4)]
+	end,
+	---@param s NumCtrl
+	---@return number
+	randNum=function(s)
+		return s.dirs[s:randDir()]
+	end,
+	---Generate output using 2 random directions and given operation
+	---@param s NumCtrl
+	---@param op operation
+	outputUsing=function(s,op)
+		return op(s:randNum(), s:randNum())
+	end
+}
 
 -- <TILES>
 -- 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
