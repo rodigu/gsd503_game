@@ -12,66 +12,78 @@
 ---@field name string
 ---@field vec {x: number, y:number}
 
-
+---@alias Vec {x: number, y:number}
 ---@class Vectic
-local Vectic={}
-Vectic.zero=function()return{x=0,y=0}end
-Vectic.new=function(x,y)
- local v={}
- v.x=x
- v.y=y
- v.add=function(v2)return Vectic.new(v.x+v2.x,v.y+v2.y)end
- v.iadd=function(v2)
-  v.x=v.x+v2.x
-  v.y=v.y+v2.y
-  return v
- end
- v.sub=function(v2)return Vectic.new(v.x-v2.x,v.y-v2.y)end
- v.isub=function(v2)
-  v.x=v.x-v2.x
-  v.y=v.y-v2.y
-  return v
- end
- v.mul=function(s)return Vectic.new(v.x*s,v.y*s)end
- v.imul=function (s)
-  v.x=v.x*s
-  v.y=v.y*s
-  return v
- end
- v.repr=function() return "Vectic.new("..v.x..", "..{v.y}..")"end
- v.div=function(s)
-  if type(s)=="number" then return Vectic.new(v.x/s,v.y/s) end
-  return Vectic.new(v.x/s.x,v.y/s.y)
- end
- v.idiv=function(s)
-  if type(s)=="number" then 
-   v.x=v.x/s
-   v.y=v.y/s
-   return v
-  end
-  v.x=v.x/s.x
-  v.y=v.y/s.y
-  return v
- end
- v.floordiv=function(s)
-  if type(s)=="number"then return Vectic.new(v.x//s,v.y//s)end
-  return Vectic.new(v.x//s.x,v.y//s.y)
- end
- v.floor=function()return v.floordiv(1)end
- v.dist2=function(v2)return(v.x-v2.x)^2+(v.y-v2.y)^2 end
- v.dist=function(v2)return math.sqrt(v.dist2(v2))end
- v.norm=function()return v.dist(Vectic.zero())end
- v.len=v.norm
- v.eq=function(v2)return v.x==v2.x and v.y==v2.y end
- v.normalized=function()return v.div(v.norm())end
- v.normalize=function()
-  v=v.normalized()
-  return v
- end
- v.rotate=function(t)return Vectic.new(v.x*math.cos(t)-v.x*math.sin(t),v.y*math.sin(t)+v.y*math.cos(t))end
- v.copy=function()return Vectic.new(v.x,v.y)end
- return v
-end
+Vectic={}
+Vectic={
+	---@param x number
+	---@param y number
+	---@return Vec
+	new=function(x,y)return{x=x,y=y}end,
+	---@param v Vec
+	---@param v2 Vec
+	---@return Vec
+	add=function(v,v2)return Vectic.new(v.x+v2.x,v.y+v2.y)end,
+	---@param v Vec
+	---@param v2 Vec
+	---@return Vec
+	sub=function(v,v2)return Vectic.new(v.x-v2.x,v.y-v2.y)end,
+	---@param v Vec
+	---@param s Vec|number
+	---@return Vec
+	mul=function(v,s)return Vectic.new(v.x*s,v.y*s)end,
+	---@param v Vec
+	---@return string
+	repr=function(v) return "Vectic.new("..v.x..", "..{v.y}..")"end,
+	---@param v Vec
+	---@param s Vec|number
+	---@return Vec
+	div=function(v,s)
+	 if type(s)=="number" then return Vectic.new(v.x/s,v.y/s) end
+	 return Vectic.new(v.x/s.x,v.y/s.y)
+	end,
+	---@param v Vec
+	---@param s Vec|number
+	---@return Vec
+	floordiv=function(v,s)
+	 if type(s)=="number"then return Vectic.new(v.x//s,v.y//s)end
+	 return Vectic.new(v.x//s.x,v.y//s.y)
+	end,
+	---@param v Vec
+	---@return Vec
+	floor=function(v)return Vectic.floordiv(v,1)end,
+	---@param v Vec
+	---@param v2 Vec
+	---@return number
+	dist2=function(v,v2)return(v.x-v2.x)^2+(v.y-v2.y)^2 end,
+	---@param v Vec
+	---@param v2 Vec
+	---@return number
+	dist=function(v,v2)return math.sqrt(v.dist2(v2))end,
+	---@param v Vec
+	---@return number
+	norm=function(v)return Vectic.dist(v,Vectic.zero())end,
+	len=Vectic.norm,
+	---@param v Vec
+	---@param v2 Vec
+	---@return boolean
+	eq=function(v,v2)return v.x==v2.x and v.y==v2.y end,
+	---@param v Vec
+	---@return Vec
+	normalize=function(v)return Vectic.div(v,Vectic.norm(v))end,
+	---@param v Vec
+	---@param t number Angle Theta in radians
+	---@return Vec
+	rotate=function(v,t)return Vectic.new(v.x*math.cos(t)-v.x*math.sin(t),v.y*math.sin(t)+v.y*math.cos(t))end,
+	---@param v Vec
+	---@return Vec
+	copy=function(v)return Vectic.new(v.x,v.y)end,
+	---@return Vec
+	zero=function()return Vectic.new(0,0)end,
+	---@param v Vec
+	---@return number,number
+	xy=function(v)return v.x,v.y end
+}
 
 W=240
 H=136
@@ -84,8 +96,8 @@ function TIC()
 	local left=btnp(2)
 	local right=btnp(3)
 
-	local duration=10
-	local amplitude=10
+	local duration=2
+	local amplitude=90
 	local frequency=.03
 
 	if up then
@@ -190,7 +202,7 @@ Screen={
 	name='screen',
 	memX=0x3FF9,
 	memY=0x3FF9+1,
-	vec=Vectic.zero(0,0),
+	vec=Vectic.zero(),
 	update=function(s)
 		poke(s.memX,s.vec.x)
 		poke(s.memY,s.vec.y)
@@ -212,54 +224,135 @@ Screen={
 ---| '"left"'
 ---| '"right"'
 
----@alias operation fun(a:number,b:number):number
+---@class Operation
+---@field f fun(a:number,b:number):number
+---@field c string
 
 BaseOps={
-	---@type operation
-	sum=function(a,b) return a+b end,
-	---@type operation
-	sub=function(a,b) return a-b end,
-	---@type operation
-	mul=function(a,b) return a*b end,
-	---@type operation
-	div=function(a,b) return a/b end,
-	---@type operation
-	zer=function(a,b) return 0 end,
+	---@type Operation
+	sum={
+		f=function(a,b) return a+b end,
+		c='+'
+	},
+	---@type Operation
+	sub={
+		f=function(a,b) return a-b end,
+		c='-'
+	},
+	---@type Operation
+	mul={
+		f=function(a,b) return a*b end,
+		c='x'
+	},
+	---@type Operation
+	div={
+		f=function(a,b) return a/b end,
+		c='/'
+	},
+	---@type Operation
+	zer={
+		f=function(a,b) return 0 end,
+		c='='
+	},
 }
 
 ---@class Controls: Entity
 Controls={
 	name='game-controls',
-	x=W/2,
-	y=3*H/4,
-	---@type {[direction]:number}
-	buttons={},
-	numsE={
-		x=Controls.x - W/4,
-		y=Controls.y
+	vec={
+		x=W/2,
+		y=3*H/4,
 	},
 	nums=NumCtrl,
-	opsE={
-		x=Controls.x + W/4,
-		y=Controls.y
-	},
 	ops=OpCtrl,
-	run=function()
-
+	---@param s Controls
+	run=function(s)
+		s.ops:drw()
+		s.nums:drw()
+		if key(1) then
+			s.nums:press('left')
+		end
 	end,
-	setup=function()
-
+	---@param s Controls
+	setup=function(s)
+		s.nums.vec=Vectic.new(s.vec.x - W/4,s.vec.y)
+		s.ops.vec=Vectic.new(s.vec.x + W/4,s.vec.y)
+		s.ops:setup()
+		s.nums:setup()
 	end
 }
 
----@class OpCtrl
-OpCtrl={
-	---@type {[direction]:operation} Control directions (up down left right)
-	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
+---@class Button: Entity
+---@field p boolean Is button pressed
+---@field c string Content of the button
+
+---@class BaseCtrl:Entity
+BaseCtrl={
+	---@type {[direction]:Button} Pressed buttons
+	btns={},
+	---@type {[direction]:Operation|number} Control directions (up down left right)
+	dirs={},
+	---@param s BaseCtrl
+	setup=function(s)
+		for d,d_cont in pairs(s.dirs) do
+			local content=tostring(d_cont)
+			if type(d_cont)~="number" then content=d_cont.c end
+			s.btns[d]={
+				p=false,
+				vec=Vectic.zero(),
+				c=content
+			}
+		end
+		local mod=8
+		s.btns['up'].vec=Vectic.new(0,-mod)
+		s.btns['down'].vec=Vectic.new(0,mod)
+		s.btns['left'].vec=Vectic.new(-mod,0)
+		s.btns['right'].vec=Vectic.new(mod,0)
+	end,
+	---@param s BaseCtrl
+	drw=function(s)
+		local x,y=Vectic.xy(s.vec)
+		for d,b in pairs(s.btns) do
+			local bx=x+b.vec.x
+			local by=y+b.vec.y
+			local m=0
+			if b.p then m=1 end
+			local t_wid=print(b.c,2*W,2*H)
+			print(b.c,bx-t_wid/2,by-m,12)
+		end
+	end,
+	---@param s BaseCtrl
+	---@param btn direction
+	---@return Button
+	press=function(s,btn)
+		Factory:add(s.name..'-'..btn,15,
+			function()
+				s.btns[btn].p=true
+			end,
+			function()
+				s.btns[btn].p=false
+			end
+		)
+		return s.btns[btn]
+	end
 }
 
----@class NumCtrl
+---@class OpCtrl:BaseCtrl
+OpCtrl={
+	name='Operations-control',
+	---@type {[direction]:Button} Pressed buttons
+	btns={},
+	---@type {[direction]:Operation} Control directions (up down left right)
+	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
+	setup=BaseCtrl.setup,
+	drw=BaseCtrl.drw,
+}
+
+---@class NumCtrl:BaseCtrl
 NumCtrl={
+	name='numeric-control',
+	---@type {[direction]:Button} Pressed buttons
+	btns={},
 	---@type {[direction]:number} Control directions (up down left right)
 	dirs={up=0,down=0,left=0,right=0},
 	---@type {[direction]: {min:number, max:number}}
@@ -269,15 +362,18 @@ NumCtrl={
 		left={min=1,max=9},
 		right={min=1,max=9}
 	},
+	setup=BaseCtrl.setup,
+	drw=BaseCtrl.drw,
 	---@param s NumCtrl
 	---@param dir direction
 	reGen=function(s,dir)
 		s.dirs[dir]=math.random(s.ranges[dir].min,s.ranges[dir].max)
+		s.btns[dir].c=tostring(s.dirs[dir])
 	end,
 	---Returns random direction
-	---@param s NumCtrl
+	---@param _ NumCtrl
 	---@return direction
-	randDir=function(s)
+	randDir=function(_)
 		local pd={'up','down','left','right'}
 		return pd[math.random(4)]
 	end,
@@ -286,11 +382,20 @@ NumCtrl={
 	randNum=function(s)
 		return s.dirs[s:randDir()]
 	end,
-	---Generate output using 2 random directions and given operation
+	---Generate output using 2 random directions and given Operation
 	---@param s NumCtrl
-	---@param op operation
+	---@param op Operation
 	outputUsing=function(s,op)
 		return op(s:randNum(), s:randNum())
+	end,
+	---@param s NumCtrl
+	---@param btn direction
+	---@return number
+	press=function(s,btn)
+		BaseCtrl.press(s,btn)
+		local num=s.dirs[btn]
+		s:reGen(btn)
+		return num
 	end
 }
 
@@ -304,6 +409,17 @@ NumCtrl={
 -- 019:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
 -- 020:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
 -- </TILES>
+
+-- <SPRITES>
+-- 000:0eeeeeeeeeddddddedddddddedddddddedddddddedddddddedddddddeddddddd
+-- 001:eeeeeee0ddddddeedddddddedddddddedddddddedddddddedddddddeddddddde
+-- 002:00000000000000000cccccccccddddddcdddddddcdddddddcdddddddcddddddd
+-- 003:0000000000000000ccccccc0ddddddccdddddddcdddddddcdddddddcdddddddc
+-- 016:edddddddedddddddedddddddeeddddddfeeeeeeeffffffffffffffff0fffffff
+-- 017:dddddddedddddddedddddddeddddddeeeeeeeeeffffffffffffffffffffffff0
+-- 018:cdddddddcdddddddcdddddddcdddddddcdddddddccddddddfccccccc0fffffff
+-- 019:dddddddcdddddddcdddddddcdddddddcdddddddcddddddcccccccccffffffff0
+-- </SPRITES>
 
 -- <WAVES>
 -- 000:00000000ffffffff00000000ffffffff
