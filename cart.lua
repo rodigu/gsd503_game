@@ -91,28 +91,10 @@ F=0
 
 function TIC()
 	cls(0)
-	local down=btnp(0)
-	local up=btnp(1)
-	local left=btnp(2)
-	local right=btnp(3)
+	
+	if F==0 then Controls:setup() end
 
-	local duration=2
-	local amplitude=90
-	local frequency=.03
-
-	if up then
-		Factory:pushTo(Screen,duration,'y',-amplitude,frequency)
-	end
-	if down then
-		Factory:pushTo(Screen,duration,'y',amplitude,frequency)
-	end
-	if left then
-		Factory:pushTo(Screen,duration,'x',amplitude,frequency)
-	end
-	if right then
-		Factory:pushTo(Screen,duration,'x',-amplitude,frequency)
-	end
-
+	Controls:run()
 	Factory:run()
 	Screen:update()
 
@@ -188,13 +170,17 @@ Factory={
 	---@param comp 'x'|'y' Vectic component to modify
 	pushTo=function(s,obj,t,comp,a,b)
 		local startF=F
+		local ox,oy=Vectic.xy(obj.vec)
+		local m=ox
+		if comp=='y' then m=oy end
 		s:add(obj.name..'_push',t,function()
-			obj.vec[comp]=a*math.sin(b*(F-startF))
+			obj.vec[comp]=m+a*math.sin(b*(F-startF))
 		end,
 		function()
-			obj.vec=Vectic.zero()
+			obj.vec=Vectic.new(ox,oy)
 		end)
-	end
+	end,
+	null=function()end
 }
 
 ---@class Screen: Entity
@@ -256,32 +242,6 @@ BaseOps={
 	},
 }
 
----@class Controls: Entity
-Controls={
-	name='game-controls',
-	vec={
-		x=W/2,
-		y=3*H/4,
-	},
-	nums=NumCtrl,
-	ops=OpCtrl,
-	---@param s Controls
-	run=function(s)
-		s.ops:drw()
-		s.nums:drw()
-		if key(1) then
-			s.nums:press('left')
-		end
-	end,
-	---@param s Controls
-	setup=function(s)
-		s.nums.vec=Vectic.new(s.vec.x - W/4,s.vec.y)
-		s.ops.vec=Vectic.new(s.vec.x + W/4,s.vec.y)
-		s.ops:setup()
-		s.nums:setup()
-	end
-}
-
 ---@class Button: Entity
 ---@field p boolean Is button pressed
 ---@field c string Content of the button
@@ -303,7 +263,7 @@ BaseCtrl={
 				c=content
 			}
 		end
-		local mod=8
+		local mod=16
 		s.btns['up'].vec=Vectic.new(0,-mod)
 		s.btns['down'].vec=Vectic.new(0,mod)
 		s.btns['left'].vec=Vectic.new(-mod,0)
@@ -316,16 +276,19 @@ BaseCtrl={
 			local bx=x+b.vec.x
 			local by=y+b.vec.y
 			local m=0
-			if b.p then m=1 end
+			if b.p then m=2 end
 			local t_wid=print(b.c,2*W,2*H)
-			print(b.c,bx-t_wid/2,by-m,12)
+			local spr_id=256
+			if b.p then spr_id=258 end
+			spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
+			print(b.c,bx-t_wid/2,by+m-4,12)
 		end
 	end,
 	---@param s BaseCtrl
 	---@param btn direction
 	---@return Button
 	press=function(s,btn)
-		Factory:add(s.name..'-'..btn,15,
+		Factory:add(s.name..'-'..btn..'-ispush',5,
 			function()
 				s.btns[btn].p=true
 			end,
@@ -333,6 +296,9 @@ BaseCtrl={
 				s.btns[btn].p=false
 			end
 		)
+		local xy='x'
+		if btn=='up' or btn=='down' then xy='y' end
+		Factory:pushTo(s,5,xy,-2,.1)
 		return s.btns[btn]
 	end
 }
@@ -394,10 +360,42 @@ NumCtrl={
 	press=function(s,btn)
 		BaseCtrl.press(s,btn)
 		local num=s.dirs[btn]
-		s:reGen(btn)
+		Factory:add(s.name..'-'..btn..'-regen',5,
+			function()
+				s:reGen(btn)
+			end,
+			Factory.null
+		)
 		return num
 	end
 }
+
+---@class Controls: Entity
+Controls={
+	name='game-controls',
+	vec={
+		x=W/2,
+		y=3*H/4,
+	},
+	nums=NumCtrl,
+	ops=OpCtrl,
+	---@param s Controls
+	run=function(s)
+		s.ops:drw()
+		s.nums:drw()
+		if keyp(1) then
+			s.nums:press('left')
+		end
+	end,
+	---@param s Controls
+	setup=function(s)
+		s.nums.vec=Vectic.new(s.vec.x - W/4,s.vec.y)
+		s.ops.vec=Vectic.new(s.vec.x + W/4,s.vec.y)
+		s.ops:setup()
+		s.nums:setup()
+	end
+}
+
 
 -- <TILES>
 -- 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
