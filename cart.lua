@@ -263,7 +263,7 @@ BaseCtrl={
 				c=content
 			}
 		end
-		local mod=16
+		local mod=17
 		s.btns['up'].vec=Vectic.new(0,-mod)
 		s.btns['down'].vec=Vectic.new(0,mod)
 		s.btns['left'].vec=Vectic.new(-mod,0)
@@ -288,7 +288,7 @@ BaseCtrl={
 	---@param btn direction
 	---@return Button
 	press=function(s,btn)
-		Factory:add(s.name..'-'..btn..'-ispush',5,
+		Factory:add(s.name..'-'..btn..'-ispush',7,
 			function()
 				s.btns[btn].p=true
 			end,
@@ -298,7 +298,7 @@ BaseCtrl={
 		)
 		local xy='x'
 		if btn=='up' or btn=='down' then xy='y' end
-		Factory:pushTo(s,5,xy,-2,.1)
+		Factory:pushTo(s,7,xy,-1,.2)
 		return s.btns[btn]
 	end
 }
@@ -360,7 +360,7 @@ NumCtrl={
 	press=function(s,btn)
 		BaseCtrl.press(s,btn)
 		local num=s.dirs[btn]
-		Factory:add(s.name..'-'..btn..'-regen',5,
+		Factory:add(s.name..'-'..btn..'-regen',7,
 			function()
 				s:reGen(btn)
 			end,
@@ -383,7 +383,11 @@ Controls={
 	run=function(s)
 		s.ops:drw()
 		s.nums:drw()
-		if keyp(1) then
+		s:hndl_input()
+	end,
+	---@param s Controls
+	hndl_input=function(s)
+		if keyp(1) or btnp(2) then
 			s.nums:press('left')
 		end
 	end,
@@ -410,13 +414,13 @@ Controls={
 
 -- <SPRITES>
 -- 000:0eeeeeeeeeddddddedddddddedddddddedddddddedddddddedddddddeddddddd
--- 001:eeeeeee0ddddddeedddddddedddddddedddddddedddddddedddddddeddddddde
--- 002:00000000000000000cccccccccddddddcdddddddcdddddddcdddddddcddddddd
--- 003:0000000000000000ccccccc0ddddddccdddddddcdddddddcdddddddcdddddddc
+-- 001:eeeeee00dddddee0dddddde0dddddde0dddddde0dddddde0dddddde0dddddde0
+-- 002:00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+-- 003:0000000000000000eeeeee00eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0
 -- 016:edddddddedddddddedddddddeeddddddfeeeeeeeffffffffffffffff0fffffff
--- 017:dddddddedddddddedddddddeddddddeeeeeeeeeffffffffffffffffffffffff0
--- 018:cdddddddcdddddddcdddddddcdddddddcdddddddccddddddfccccccc0fffffff
--- 019:dddddddcdddddddcdddddddcdddddddcdddddddcddddddcccccccccffffffff0
+-- 017:dddddde0dddddde0dddddde0dddddee0eeeeeef0fffffff0fffffff0ffffff00
+-- 018:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeeeee0fffffff
+-- 019:eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeef0fffffff0
 -- </SPRITES>
 
 -- <WAVES>
