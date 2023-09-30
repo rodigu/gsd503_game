@@ -248,6 +248,10 @@ BaseOps={
 
 ---@class BaseCtrl:Entity
 BaseCtrl={
+	---@type {[direction]: number}
+	bp_map={},
+	---@type {[direction]: number}
+	kp_map={},
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:Operation|number} Control directions (up down left right)
@@ -298,25 +302,59 @@ BaseCtrl={
 		)
 		local xy='x'
 		if btn=='up' or btn=='down' then xy='y' end
-		Factory:pushTo(s,7,xy,-1,.2)
+		local dir_mod=2
+		if btn=='left' or btn=='up' then dir_mod=-1 end
+		Factory:pushTo(s,7,xy,dir_mod,.2)
 		return s.btns[btn]
+	end,
+	---@param s OpCtrl|NumCtrl
+	---@param d direction
+	---@return boolean
+	check_press=function(s,d)
+		return keyp(s.kp_map[d]) or btnp(s.bp_map[d])
 	end
 }
 
 ---@class OpCtrl:BaseCtrl
 OpCtrl={
 	name='Operations-control',
+	kp_map={
+		left=10,
+		right=12,
+		up=9,
+		down=11
+	},
+	bp_map={
+		left=6,
+		right=5,
+		up=7,
+		down=4
+	},
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:Operation} Control directions (up down left right)
 	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
 	setup=BaseCtrl.setup,
 	drw=BaseCtrl.drw,
+	press=BaseCtrl.press,
+	check_press=BaseCtrl.check_press
 }
 
 ---@class NumCtrl:BaseCtrl
 NumCtrl={
 	name='numeric-control',
+	kp_map={
+		left=6,
+		right=8,
+		up=20,
+		down=7
+	},
+	bp_map={
+		left=2,
+		right=3,
+		up=0,
+		down=1
+	},
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:number} Control directions (up down left right)
@@ -367,7 +405,8 @@ NumCtrl={
 			Factory.null
 		)
 		return num
-	end
+	end,
+	check_press=BaseCtrl.check_press,
 }
 
 ---@class Controls: Entity
@@ -387,8 +426,12 @@ Controls={
 	end,
 	---@param s Controls
 	hndl_input=function(s)
-		if keyp(1) or btnp(2) then
-			s.nums:press('left')
+		for d,_ in pairs(s.nums.dirs) do
+			if s.nums:check_press(d) then
+				s.nums:press(d)
+			elseif s.ops:check_press(d) then
+				s.ops:press(d)
+			end
 		end
 	end,
 	---@param s Controls
