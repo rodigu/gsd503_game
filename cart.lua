@@ -13,6 +13,7 @@
 ---@field vec {x: number, y:number}
 
 ---@alias Vec {x: number, y:number}
+Vectic={}
 ---@class Vectic
 Vectic={
 	---@param x number
