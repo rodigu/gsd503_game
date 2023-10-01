@@ -14,7 +14,6 @@
 
 ---@alias Vec {x: number, y:number}
 ---@class Vectic
-Vectic={}
 Vectic={
 	---@param x number
 	---@param y number
@@ -59,7 +58,7 @@ Vectic={
 	---@param v Vec
 	---@param v2 Vec
 	---@return number
-	dist=function(v,v2)return math.sqrt(v.dist2(v2))end,
+	dist=function(v,v2)return math.sqrt(Vectic.dist2(v,v2))end,
 	---@param v Vec
 	---@return number
 	norm=function(v)return Vectic.dist(v,Vectic.zero())end,
