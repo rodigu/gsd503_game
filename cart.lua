@@ -91,11 +91,11 @@ F=0
 
 function TIC()
 	cls(0)
+	Factory:run()
 	
 	if F==0 then Controls:setup() end
 
 	Controls:run()
-	Factory:run()
 	Screen:update()
 
 	F=F+1
@@ -154,12 +154,13 @@ Factory={
 	---@param t frames Shake duration
 	---@param i number Shake intensity
 	shake=function(s,obj,t,i)
+		local ox,oy=Vectic.xy(obj.vec)
 		s:add(obj.name..'_shake',t,function()
-			obj.vec.x=math.random(-i,i)
-			obj.vec.y=math.random(-i,i)
+			obj.vec.x=math.random(ox-i,ox+i)
+			obj.vec.y=math.random(oy-i,oy+i)
 		end,
 		function()
-			obj.vec=Vectic.zero()
+			obj.vec=Vectic.new(ox,oy)
 		end)
 	end,
 	---@param s Factory
