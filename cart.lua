@@ -439,6 +439,15 @@ NumCtrl={
 	get_btn_pos=BaseCtrl.get_btn_pos
 }
 
+---@class NumberEntity:Entity
+---@field n number|nil
+
+---@param n number|nil
+---@return NumberEntity
+function CreateNum(name,n,x,y)
+	return {name=name,n=n,vec={x=x,y=y}}
+end
+
 ---@class Controls: Entity
 Controls={
 	name='game-controls',
