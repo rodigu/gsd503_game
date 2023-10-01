@@ -482,6 +482,7 @@ Controls={
 		for d,_ in pairs(s.nums.dirs) do
 			if s.nxt_in:check_press(d) then
 				if s.nxt_in.btns[d].c=='=' then
+					s:_anim_output()
 					s:_btn_press(d)
 					s.output.n=s.result.n
 					s.result.n=nil
@@ -496,6 +497,10 @@ Controls={
 		end
 	end,
 	---@param s Controls
+	_anim_output=function(s)
+		sfx(1,10)
+	end,
+	---@param s Controls
 	---@param d direction
 	_anim_change_result=function(s,d)
 		local x,y=s.nxt_in:get_btn_pos(d)
@@ -507,7 +512,7 @@ Controls={
 
 		Factory:shake(s.result,7,2)
 
-		sfx(0,math.random(20,30))
+		sfx(0,20)
 	end,
 	---@param s Controls
 	---@param d direction
@@ -583,7 +588,8 @@ function pal(c0,c1)
 -- </WAVES>
 
 -- <SFX>
--- 000:02f702e502e302d002c002ce02ad029b026b024a022a0219f219f219f209f200f200f200f200f200f200f200f200f200f200f200f200f200f200f200205000000000
+-- 000:0119013a014b015c116d217e718f9180b1a1c1c3d1d4e1f5f126f107f109f109f100f100f100f100f100f100f100f100f100f100f100f100f100f100107000000000
+-- 001:0119012c0120013111242126f127f12cf11cf113019901bd01d001e401f7f10af100f100f100f100f100f100f100f100f100f100f100f100f100f100107000000000
 -- </SFX>
 
 -- <TRACKS>
