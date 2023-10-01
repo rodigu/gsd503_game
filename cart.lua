@@ -321,12 +321,18 @@ BaseCtrl={
 	---@return boolean
 	check_press=function(s,d)
 		return keyp(s.kp_map[d]) or btnp(s.bp_map[d])
+	end,
+	---@param s BaseCtrl
+	---@param b direction
+	get_btn_pos=function(s,b)
+		local x,y=Vectic.xy(s.btns[b].vec)
+		return x+s.vec.x,y+s.vec.y
 	end
 }
 
 ---@class OpCtrl:BaseCtrl
 OpCtrl={
-	name='Operations-control',
+	name='operations-control',
 	kp_map={
 		left=10,
 		right=12,
@@ -352,8 +358,15 @@ OpCtrl={
 		s.btns['right'].color=2
 	end,
 	drw=BaseCtrl.drw,
-	press=BaseCtrl.press,
-	check_press=BaseCtrl.check_press
+	---@param s BaseCtrl
+	---@param btn direction
+	---@return string
+	press=function(s,btn)
+		BaseCtrl.press(s,btn)
+		return s.btns[btn].c
+	end,
+	check_press=BaseCtrl.check_press,
+	get_btn_pos=BaseCtrl.get_btn_pos
 }
 
 ---@class NumCtrl:BaseCtrl
@@ -423,6 +436,7 @@ NumCtrl={
 		return num
 	end,
 	check_press=BaseCtrl.check_press,
+	get_btn_pos=BaseCtrl.get_btn_pos
 }
 
 ---@class Controls: Entity
