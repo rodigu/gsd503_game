@@ -98,8 +98,6 @@ function TIC()
 	Factory:run()
 	Screen:update()
 
-	spr(1+F%60//30*2,W/2,H/2,14,3,0,0,2,2)
-	print("HELLO WORLD!",84,84)
 	F=F+1
 end
 
@@ -245,6 +243,7 @@ BaseOps={
 ---@class Button: Entity
 ---@field p boolean Is button pressed
 ---@field c string Content of the button
+---@field color number
 
 ---@class BaseCtrl:Entity
 BaseCtrl={
@@ -264,7 +263,8 @@ BaseCtrl={
 			s.btns[d]={
 				p=false,
 				vec=Vectic.zero(),
-				c=content
+				c=content,
+				color=13
 			}
 		end
 		local mod=17
@@ -284,8 +284,10 @@ BaseCtrl={
 			local t_wid=print(b.c,2*W,2*H)
 			local spr_id=256
 			if b.p then spr_id=258 end
+			pal(13,b.color)
 			spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
 			print(b.c,bx-t_wid/2,by+m-4,12)
+			pal()
 		end
 	end,
 	---@param s BaseCtrl
@@ -334,7 +336,14 @@ OpCtrl={
 	btns={},
 	---@type {[direction]:Operation} Control directions (up down left right)
 	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
-	setup=BaseCtrl.setup,
+	---@param s OpCtrl
+	setup=function(s)
+		BaseCtrl.setup(s)
+		s.btns['up'].color=3
+		s.btns['down'].color=6
+		s.btns['left'].color=10
+		s.btns['right'].color=2
+	end,
 	drw=BaseCtrl.drw,
 	press=BaseCtrl.press,
 	check_press=BaseCtrl.check_press
@@ -443,6 +452,13 @@ Controls={
 	end
 }
 
+---@param c0? number Original color
+---@param c1? number
+function pal(c0,c1)
+	if(c0==nil and c1==nil)then for i=0,15 do poke4(0x3FF0*2+i,i)end
+	else poke4(0x3FF0*2+c0,c1) end
+ end
+
 
 -- <TILES>
 -- 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
@@ -473,7 +489,7 @@ Controls={
 -- </WAVES>
 
 -- <SFX>
--- 000:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000304000000000
+-- 000:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000
 -- </SFX>
 
 -- <TRACKS>
