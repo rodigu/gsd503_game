@@ -246,6 +246,22 @@ BaseOps={
 ---@field c string Content of the button
 ---@field color number
 
+---@param b Button
+---@param parent Entity
+function DrwBtn(b,parent)
+	local x,y=Vectic.xy(parent.vec)
+	local bx=x+b.vec.x
+	local by=y+b.vec.y
+	local m=0
+	if b.p then m=2 end
+	local t_wid=print(b.c,2*W,2*H,0,false)
+	local spr_id=256
+	if b.p then spr_id=258 end
+	pal(13,b.color)
+	spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
+	print(b.c,bx-t_wid/2,by+m-4,12,false)
+end
+
 ---@class BaseCtrl:Entity
 BaseCtrl={
 	---@type {[direction]: number}
@@ -278,17 +294,7 @@ BaseCtrl={
 	drw=function(s)
 		local x,y=Vectic.xy(s.vec)
 		for d,b in pairs(s.btns) do
-			local bx=x+b.vec.x
-			local by=y+b.vec.y
-			local m=0
-			if b.p then m=2 end
-			local t_wid=print(b.c,2*W,2*H)
-			local spr_id=256
-			if b.p then spr_id=258 end
-			pal(13,b.color)
-			spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
-			print(b.c,bx-t_wid/2,by+m-4,12)
-			pal()
+			DrwBtn(b,s)
 		end
 	end,
 	---@param s BaseCtrl
