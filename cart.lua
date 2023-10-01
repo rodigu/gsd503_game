@@ -451,34 +451,98 @@ end
 ---@class Controls: Entity
 Controls={
 	name='game-controls',
+	---@type OpCtrl|NumCtrl
+	nxt_in=nil,
 	vec={
 		x=W/2,
 		y=3*H/4,
 	},
+	---@type NumberEntity
+	result=CreateNum('result',nil,W/2,H/2),
+	---@type NumberEntity
+	output=CreateNum('output',nil,W/2,H/2-10),
+	---@type Operation
+	operation=nil,
+	hist={},
 	nums=NumCtrl,
 	ops=OpCtrl,
 	---@param s Controls
 	run=function(s)
+		local x,y=Vectic.xy(s.nxt_in.vec)
+		circ(x-1,y,20,5)
 		s.ops:drw()
 		s.nums:drw()
 		s:hndl_input()
+		print(s.result.n,s.result.vec.x,s.result.vec.y)
+		print(s.output.n,s.output.vec.x,s.output.vec.y)
+	---@type NumCtrl|OpCtrl
 	end,
 	---@param s Controls
 	hndl_input=function(s)
 		for d,_ in pairs(s.nums.dirs) do
-			if s.nums:check_press(d) then
-				s.nums:press(d)
-			elseif s.ops:check_press(d) then
-				s.ops:press(d)
+			if s.nxt_in:check_press(d) then
+				if s.nxt_in.btns[d].c=='=' then
+					s:_btn_press(d)
+					s.output.n=s.result.n
+					s.result.n=nil
+					s.hist={}
+					s.operation=nil
+					s.nxt_in=s.nums
+				else
+					s:_anim_change_result(d)
+					s:_btn_press(d)
+				end
 			end
 		end
 	end,
 	---@param s Controls
+	---@param d direction
+	_anim_change_result=function(s,d)
+		local x,y=s.nxt_in:get_btn_pos(d)
+		Factory:add(s.name..'change-result-lazer',10,
+		function()
+			line(s.result.vec.x,s.result.vec.y,x,y,2+(F//3)%2)
+		end,
+		Factory.null)
+
+		Factory:shake(s.result,7,2)
+
+		sfx(0,math.random(20,30))
+	end,
+	---@param s Controls
+	---@param d direction
+	---@param last number|string Last pressed number
+	_update_result=function(s,d,last)
+		if s.result.n==nil then
+			s.result.n=last
+		elseif s.operation==nil then
+			s.operation=s.nxt_in.dirs[d]
+		elseif type(s.nxt_in.dirs[d])=="number" then
+			s.result.n=s.operation.f(s.result.n,s.nxt_in.dirs[d])
+		else
+			s.operation=s.nxt_in.dirs[d]
+		end
+	end,
+	---@param s Controls
+	---@param d direction
+	_btn_press=function(s,d)
+		local last=s.nxt_in:press(d)
+		table.insert(s.hist,last)
+		s:_update_result(d,last)
+		if s.nxt_in.name==s.nums.name then s.nxt_in=s.ops
+		else s.nxt_in=s.nums end
+	end,
+	---@param s Controls
 	setup=function(s)
-		s.nums.vec=Vectic.new(s.vec.x - W/4,s.vec.y)
-		s.ops.vec=Vectic.new(s.vec.x + W/4,s.vec.y)
+		s.nums.vec=Vectic.new(s.vec.x - W/3,s.vec.y)
+		s.ops.vec=Vectic.new(s.vec.x + W/3,s.vec.y)
 		s.ops:setup()
 		s.nums:setup()
+		for d,_ in pairs(s.nums.dirs) do
+			s.nums:reGen(d)
+		end
+		s.nxt_in=s.nums
+		s.result.n=nil
 	end
 }
 
@@ -519,7 +583,7 @@ function pal(c0,c1)
 -- </WAVES>
 
 -- <SFX>
--- 000:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000
+-- 000:02f702e502e302d002c002ce02ad029b026b024a022a0219f219f219f209f200f200f200f200f200f200f200f200f200f200f200f200f200f200f200205000000000
 -- </SFX>
 
 -- <TRACKS>
