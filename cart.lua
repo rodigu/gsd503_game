@@ -10,80 +10,109 @@
 
 ---@class Entity
 ---@field name string
----@field vec {x: number, y:number}
+---@field vec Vectic
 
----@alias Vec {x: number, y:number}
-Vectic={}
 ---@class Vectic
-Vectic={
-	---@param x number
-	---@param y number
-	---@return Vec
-	new=function(x,y)return{x=x,y=y}end,
-	---@param v Vec
-	---@param v2 Vec
-	---@return Vec
-	add=function(v,v2)return Vectic.new(v.x+v2.x,v.y+v2.y)end,
-	---@param v Vec
-	---@param v2 Vec
-	---@return Vec
-	sub=function(v,v2)return Vectic.new(v.x-v2.x,v.y-v2.y)end,
-	---@param v Vec
-	---@param s Vec|number
-	---@return Vec
-	mul=function(v,s)return Vectic.new(v.x*s,v.y*s)end,
-	---@param v Vec
-	---@return string
-	repr=function(v) return "Vectic.new("..v.x..", "..{v.y}..")"end,
-	---@param v Vec
-	---@param s Vec|number
-	---@return Vec
-	div=function(v,s)
-	 if type(s)=="number" then return Vectic.new(v.x/s,v.y/s) end
-	 return Vectic.new(v.x/s.x,v.y/s.y)
-	end,
-	---@param v Vec
-	---@param s Vec|number
-	---@return Vec
-	floordiv=function(v,s)
-	 if type(s)=="number"then return Vectic.new(v.x//s,v.y//s)end
-	 return Vectic.new(v.x//s.x,v.y//s.y)
-	end,
-	---@param v Vec
-	---@return Vec
-	floor=function(v)return Vectic.floordiv(v,1)end,
-	---@param v Vec
-	---@param v2 Vec
-	---@return number
-	dist2=function(v,v2)return(v.x-v2.x)^2+(v.y-v2.y)^2 end,
-	---@param v Vec
-	---@param v2 Vec
-	---@return number
-	dist=function(v,v2)return math.sqrt(Vectic.dist2(v,v2))end,
-	---@param v Vec
-	---@return number
-	norm=function(v)return Vectic.dist(v,Vectic.zero())end,
-	len=Vectic.norm,
-	---@param v Vec
-	---@param v2 Vec
-	---@return boolean
-	eq=function(v,v2)return v.x==v2.x and v.y==v2.y end,
-	---@param v Vec
-	---@return Vec
-	normalize=function(v)return Vectic.div(v,Vectic.norm(v))end,
-	---@param v Vec
-	---@param t number Angle Theta in radians
-	---@return Vec
-	rotate=function(v,t)return Vectic.new(v.x*math.cos(t)-v.x*math.sin(t),v.y*math.sin(t)+v.y*math.cos(t))end,
-	---@param v Vec
-	---@return Vec
-	copy=function(v)return Vectic.new(v.x,v.y)end,
-	---@return Vec
-	zero=function()return Vectic.new(0,0)end,
-	---@param v Vec
-	---@return number,number
-	xy=function(v)return v.x,v.y end
-}
+---@field x number
+---@field y number
+local Vectic={}
+Vectic.__index=Vectic
+
+---@type fun(a?:number,b?:number): Vectic
+Vectic.new=function(x,y)
+  local v = {x = x or 0, y = y or 0}
+  setmetatable(v, Vectic)
+  return v
+end
+
+---@alias VecticOperation<OUT> fun(a:number|Vectic,b:number|Vectic):OUT
+---@type VecticOperation<Vectic>
+function Vectic.__add(a,b)
+	a,b=Vectic.twoVec(a,b)
+	return Vectic.new(a.x+b.x,a.y+b.y)
+end
+---@type VecticOperation<Vectic>
+function Vectic.__sub(a, b)
+	a,b=Vectic.twoVec(a,b)
+  return Vectic.new(a.x - b.x, a.y - b.y)
+end
+---@type VecticOperation<Vectic>
+function Vectic.__mul(a, b)
+	a,b=Vectic.twoVec(a,b)
+	return Vectic.new(a.x*b.x,a.y*b.y)
+end
+---@type VecticOperation<Vectic>
+function Vectic.__div(a, b)
+	a,b=Vectic.twoVec(a,b)
+	return Vectic.new(a.x/b.x,a.y/b.y)
+end
+---@type VecticOperation<boolean>
+function Vectic.__eq(a, b)
+	a,b=Vectic.twoVec(a,b)
+	return a.x==b.x and a.y==b.y
+end
+---@type VecticOperation<boolean>
+function Vectic.__ne(a, b)
+	a,b=Vectic.twoVec(a,b)
+	return not Vectic.__eq(a, b)
+end
+---@type fun(a:Vectic):Vectic
+function Vectic.__unm(a)
+	return Vectic.new(-a.x, -a.y)
+end
+---@type VecticOperation<boolean>
+function Vectic.__lt(a, b)
+	a,b=Vectic.twoVec(a,b)
+	 return a.x < b.x and a.y < b.y
+end
+---@type VecticOperation<boolean>
+function Vectic.__le(a, b)
+	a,b=Vectic.twoVec(a,b)
+	 return a.x <= b.x and a.y <= b.y
+end
+---@type VecticOperation<string>
+function Vectic.__tostring(v)
+	 return "(" .. v.x .. ", " .. v.y .. ")"
+end
+---@type fun(a:Vectic|number,b:Vectic|number):Vectic,Vectic
+function Vectic.twoVec(a,b)
+	return Vectic.toVec(a),Vectic.toVec(b)
+end
+---@type fun(a:Vectic|number):Vectic
+function Vectic.toVec(a)
+	if type(a)=='number' then
+		return Vectic.new(a,a)
+	end
+	return a
+end
+---@type VecticOperation<Vectic>
+function Vectic.floordiv(a,b)
+	b=Vectic.toVec(b)
+	return Vectic.new(a.x//b.x,a.y//b.y)
+end
+---@type VecticOperation<number>
+function Vectic.dist2(a,b)
+	b=Vectic.toVec(b)
+	return(a.x-b.x)^2+(a.y-b.y)^2
+end
+---@type VecticOperation<number>
+function Vectic.dist(a,b)
+	b=Vectic.toVec(b)
+	return math.sqrt(a.dist2(a,b))
+end
+---@alias VecticFunction<OUT> fun(a:Vectic):OUT
+---@type VecticFunction<Vectic>
+function Vectic.floor(a)return a.floordiv(a,1)end
+---@type VecticFunction<number>
+function Vectic.norm(a)return a:dist(Vectic.new(0,0))end
+---@type VecticFunction<Vectic>
+function Vectic.normalize(a)return a/a:norm() end
+---@type fun(a:Vectic,t:number):Vectic
+function Vectic.rotate(a,t)return Vectic.new(a.x*math.cos(t)-a.x*math.sin(t),a.y*math.sin(t)+a.y*math.cos(t))end
+---@type VecticFunction<Vectic>
+function Vectic.copy(a)return Vectic.new(a.x,a.y)end
+---@type fun(a:Vectic):number,number
+function Vectic.xy(a) return a.x,a.y end
 
 W=240
 H=136
@@ -100,6 +129,26 @@ function TIC()
 
 	F=F+1
 end
+
+---@class Game
+Game={
+	states={
+		---@param s Game
+		menu=function(s)
+		end,
+		---@param s Game
+		runGame=function(s)
+			Controls:drw()
+			Controls:run()
+			Screen:update()
+		end
+	},
+	currentState=Game.states.runGame,
+	---@param s Game
+	run=function(s)
+		s:currentState()
+	end
+}
 
 ---@class RunFunc
 ---@field name string Name of the RunFunc
@@ -154,7 +203,7 @@ Factory={
 	---@param t frames Shake duration
 	---@param i number Shake intensity
 	shake=function(s,obj,t,i)
-		local ox,oy=Vectic.xy(obj.vec)
+		local ox,oy=obj.vec:xy()
 		s:add(obj.name..'_shake',t,function()
 			obj.vec.x=math.random(ox-i,ox+i)
 			obj.vec.y=math.random(oy-i,oy+i)
@@ -169,7 +218,7 @@ Factory={
 	---@param comp 'x'|'y' Vectic component to modify
 	pushTo=function(s,obj,t,comp,a,b)
 		local startF=F
-		local ox,oy=Vectic.xy(obj.vec)
+		local ox,oy=obj.vec:xy()
 		local m=ox
 		if comp=='y' then m=oy end
 		s:add(obj.name..'_push',t,function()
@@ -187,7 +236,7 @@ Screen={
 	name='screen',
 	memX=0x3FF9,
 	memY=0x3FF9+1,
-	vec=Vectic.zero(),
+	vec=Vectic.new(),
 	update=function(s)
 		poke(s.memX,s.vec.x)
 		poke(s.memY,s.vec.y)
@@ -246,22 +295,6 @@ BaseOps={
 ---@field c string Content of the button
 ---@field color number
 
----@param b Button
----@param parent Entity
-function DrwBtn(b,parent)
-	local x,y=Vectic.xy(parent.vec)
-	local bx=x+b.vec.x
-	local by=y+b.vec.y
-	local m=0
-	if b.p then m=2 end
-	local t_wid=print(b.c,2*W,2*H,0,false)
-	local spr_id=256
-	if b.p then spr_id=258 end
-	pal(13,b.color)
-	spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
-	print(b.c,bx-t_wid/2,by+m-4,12,false)
-end
-
 ---@class BaseCtrl:Entity
 BaseCtrl={
 	---@type {[direction]: number}
@@ -272,6 +305,22 @@ BaseCtrl={
 	btns={},
 	---@type {[direction]:Operation|number} Control directions (up down left right)
 	dirs={},
+	
+	---@param s BaseCtrl
+	---@param b Button
+	drwBtn=function(s,b)
+		local x,y=s.vec:xy()
+		local bx=x+b.vec.x
+		local by=y+b.vec.y
+		local m=0
+		if b.p then m=2 end
+		local t_wid=print(b.c,2*W,2*H,0,false)
+		local spr_id=256
+		if b.p then spr_id=258 end
+		pal(13,b.color)
+		spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
+		print(b.c,bx-t_wid/2,by+m-4,12,false)
+	end,
 	---@param s BaseCtrl
 	setup=function(s)
 		for d,d_cont in pairs(s.dirs) do
@@ -279,7 +328,7 @@ BaseCtrl={
 			if type(d_cont)~="number" then content=d_cont.c end
 			s.btns[d]={
 				p=false,
-				vec=Vectic.zero(),
+				vec=Vectic.new(),
 				c=content,
 				color=13
 			}
@@ -292,9 +341,8 @@ BaseCtrl={
 	end,
 	---@param s BaseCtrl
 	drw=function(s)
-		local x,y=Vectic.xy(s.vec)
 		for d,b in pairs(s.btns) do
-			DrwBtn(b,s)
+			s:drwBtn(b)
 		end
 	end,
 	---@param s BaseCtrl
@@ -325,7 +373,7 @@ BaseCtrl={
 	---@param s BaseCtrl
 	---@param b direction
 	get_btn_pos=function(s,b)
-		local x,y=Vectic.xy(s.btns[b].vec)
+		local x,y=s.btns[b].vec:xy()
 		return x+s.vec.x,y+s.vec.y
 	end
 }
@@ -468,14 +516,16 @@ Controls={
 	ops=OpCtrl,
 	---@param s Controls
 	run=function(s)
-		local x,y=Vectic.xy(s.nxt_in.vec)
+		s:hndl_input()
+	end,
+	---@param s Controls
+	drw=function(s)
+		local x,y=s.nxt_in.vec:xy()
 		circ(x-1,y,20,5)
 		s.ops:drw()
 		s.nums:drw()
-		s:hndl_input()
 		print(s.result.n,s.result.vec.x,s.result.vec.y)
 		print(s.output.n,s.output.vec.x,s.output.vec.y)
-	---@type NumCtrl|OpCtrl
 	end,
 	---@param s Controls
 	hndl_input=function(s)
