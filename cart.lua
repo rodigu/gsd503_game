@@ -7,10 +7,14 @@
 -- script:  lua
 
 ---@alias frames number
+---@alias spr fun(id:number,x:number,y:number,colorkey?:number,scale?:number,flip?:number,rotate?:number,w?:number,h?:number)
+
+DIRS={'up','down','left','right'}
 
 ---@class Entity
 ---@field name string
 ---@field vec Vectic
+---@field siz? Vectic
 
 ---@class Vectic
 ---@field x number
@@ -24,7 +28,6 @@ Vectic.new=function(x,y)
   setmetatable(v, Vectic)
   return v
 end
-
 ---@alias VecticOperation<OUT> fun(a:number|Vectic,b:number|Vectic):OUT
 ---@type VecticOperation<Vectic>
 function Vectic.__add(a,b)
@@ -88,7 +91,7 @@ end
 ---@type VecticOperation<Vectic>
 function Vectic.floordiv(a,b)
 	b=Vectic.toVec(b)
-	return Vectic.new(a.x//b.x,a.y//b.y)
+	return Vectic.new(math.floor(a.x/b.x),math.floor(a.y/b.y))
 end
 ---@type VecticOperation<number>
 function Vectic.dist2(a,b)
@@ -100,6 +103,7 @@ function Vectic.dist(a,b)
 	b=Vectic.toVec(b)
 	return math.sqrt(a.dist2(a,b))
 end
+
 ---@alias VecticFunction<OUT> fun(a:Vectic):OUT
 ---@type VecticFunction<Vectic>
 function Vectic.floor(a)return a.floordiv(a,1)end
@@ -120,41 +124,21 @@ F=0
 
 function TIC()
 	cls(0)
-	Factory:run()
 	
 	if F==0 then Controls:setup() end
 
-	Controls:run()
-	Screen:update()
+	Game:run()
 
+	Factory:run()
 	F=F+1
 end
 
----@class Game
-Game={
-	states={
-		---@param s Game
-		menu=function(s)
-		end,
-		---@param s Game
-		runGame=function(s)
-			Controls:drw()
-			Controls:run()
-			Screen:update()
-		end
-	},
-	currentState=Game.states.runGame,
-	---@param s Game
-	run=function(s)
-		s:currentState()
-	end
-}
-
----@class RunFunc
----@field name string Name of the RunFunc
----@field t frames Time to death
----@field run fun(rf: RunFunc) Function runs every frame
----@field kill fun() Function that runs right before death
+---@type fun(p:Vectic,e:Entity):boolean
+function PtCol(p,e)
+	local rc=e.vec+e.siz/2
+	local lc=e.vec-e.siz/2
+	return p<rc and p>lc
+end
 
 ---@class Factory
 Factory={
@@ -165,15 +149,21 @@ Factory={
 	---@param t frames
 	---@param run fun()
 	---@param kill fun()
-	add=function(s,name,t,run,kill)
+	---@param delay? number
+	add=function(s,name,t,run,kill,delay)
+		delay=delay or 0
 		if s:has(name) then return end
 		s.funcs[name]={
 			name=name,
 			t=t,
 			---@param rf RunFunc
 			run=function (rf)
+				if delay>0 then
+					delay=delay-1
+					return
+				end
 				rf.t=rf.t-1
-				if rf.t>=0 then run()
+				if rf.t~=0 then run()
 				else rf.kill() end
 			end,
 			kill=function ()
@@ -228,8 +218,121 @@ Factory={
 			obj.vec=Vectic.new(ox,oy)
 		end)
 	end,
-	null=function()end
+	null=function()end,
+	---@param s Factory
+	---@param obj Entity
+	---@param t frames
+	---@param a number
+	---@param b number
+	float=function(s,obj,t)
+	end
 }
+
+---@param s Game
+GameMenu=function(s)
+	---@type Button
+	local sb={
+		c='start',
+		color=13,
+		name='start-button',
+		p=false,
+		vec=Vectic.new(W/2,H/2-20),
+		siz=Vectic.new(7*8,16)
+	}
+
+	return function(s)
+		local x,y,l=mouse()
+		if PtCol(Vectic.new(x,y),sb) then
+			sb.color=6
+			poke(0x3FFB,352)
+			if l then
+				s:transTo(Game.states.runGame)
+			end
+		else
+			sb.color=13
+			poke(0x3FFB,353)
+		end
+
+		s:drwTxtBtn(sb,sb.siz.x/8-2)
+	end
+end
+
+---@param s Game
+GameRun=function(s)
+	---@type NumberEntity
+	local target={
+		n=NumCtrl:outputUsing(OpCtrl:rndOp()),
+		vec=Vectic.new(W/2,H/2)
+	}
+	---@param s Game
+	return function(s)
+		Controls:drw()
+		Controls:run()
+		Screen:update()
+		if Controls.result==target.n then
+			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
+		end
+	end
+end
+
+---@class Game
+Game={
+	---@type fun(s:Game,b:Button,wid:number)
+	drwTxtBtn=function(s,b,wid)
+		local cx=-(wid/2)*8
+		BaseCtrl.btnSection(b,'left',b.vec+Vectic.new(cx,0))
+		cx=cx+8
+		for i=1,wid do
+			BaseCtrl.btnSection(b,'center',b.vec+Vectic.new(cx,0))
+			cx=cx+8
+		end
+		BaseCtrl.btnSection(b,'right',b.vec+Vectic.new(cx,0))
+
+		local t_wid=print(b.c,W,H,12)
+		print(b.c,b.vec.x-t_wid/2,b.vec.y-4,12)
+	end,
+	states={
+		menu=GameMenu(Game),
+		runGame=GameRun(Game)
+	},
+	---@type fun(s:Game)
+	currentState=nil,
+	---@param s Game
+	run=function(s)
+		s:currentState()
+	end,
+	---@type fun(s:Game)
+	setup=function(s)
+		s.currentState=s.states.menu
+	end,
+	---@type fun(s:Game,nxt:fun(s:Game))
+	transTo=function(s,nxt)
+		local w=0
+		local x=0
+		local dur=30
+		Factory:add('transition',dur/2+1,
+		function()
+			rect(0,0,w,H,14)
+			w=w+(W/(dur/2))
+		end,
+		function()
+			s.currentState=nxt
+		end)
+		Factory:add('detransition',dur,
+		function()
+			rect(x,0,w,H,14)
+			x=x+(W/(dur/2))
+		end,
+		Factory.null,
+		dur/2)
+	end,
+}
+
+---@class RunFunc
+---@field name string Name of the RunFunc
+---@field t frames Time to death
+---@field run fun(rf: RunFunc) Function runs every frame
+---@field kill fun() Function that runs right before death
 
 ---@class Screen: Entity
 Screen={
@@ -305,6 +408,23 @@ BaseCtrl={
 	btns={},
 	---@type {[direction]:Operation|number} Control directions (up down left right)
 	dirs={},
+	---@param b Button
+	---@param side 'left'|'right'|'center'
+	---@param pos? Vectic
+	btnSection=function(b,side,pos)
+		local spr_id=256
+
+		if side=='right' then spr_id=288
+		elseif side=='center' then spr_id=320 end
+
+		if b.p then spr_id=spr_id+1 end
+
+		if pos==nil then pos=b.vec end
+		
+		pal(13,b.color)
+		spr(spr_id,pos.x-8,pos.y-8,0,1,0,0,1,2)
+		pal()
+	end,
 	
 	---@param s BaseCtrl
 	---@param b Button
@@ -318,7 +438,9 @@ BaseCtrl={
 		local spr_id=256
 		if b.p then spr_id=258 end
 		pal(13,b.color)
-		spr(spr_id,bx-8,by-8,0,1,0,0,2,2)
+		BaseCtrl.btnSection(b,'left',b.vec+s.vec)
+		BaseCtrl.btnSection(b,'right',b.vec+Vectic.new(8,0)+s.vec)
+		pal()
 		print(b.c,bx-t_wid/2,by+m-4,12,false)
 	end,
 	---@param s BaseCtrl
@@ -414,7 +536,14 @@ OpCtrl={
 		return s.btns[btn].c
 	end,
 	check_press=BaseCtrl.check_press,
-	get_btn_pos=BaseCtrl.get_btn_pos
+	get_btn_pos=BaseCtrl.get_btn_pos,
+	drwBtn=BaseCtrl.drwBtn,
+	---@param s OpCtrl
+	---@return Operation
+	rndOp=function(s)
+		local d=DIRS[math.random(1,4)]
+		return s.dirs[d]
+	end
 }
 
 ---@class NumCtrl:BaseCtrl
@@ -484,7 +613,8 @@ NumCtrl={
 		return num
 	end,
 	check_press=BaseCtrl.check_press,
-	get_btn_pos=BaseCtrl.get_btn_pos
+	get_btn_pos=BaseCtrl.get_btn_pos,
+	drwBtn=BaseCtrl.drwBtn
 }
 
 ---@class NumberEntity:Entity
@@ -493,7 +623,7 @@ NumCtrl={
 ---@param n number|nil
 ---@return NumberEntity
 function CreateNum(name,n,x,y)
-	return {name=name,n=n,vec={x=x,y=y}}
+	return {name=name,n=n,vec=Vectic.new(x,y)}
 end
 
 ---@class Controls: Entity
@@ -608,6 +738,7 @@ function pal(c0,c1)
 	else poke4(0x3FF0*2+c0,c1) end
  end
 
+Game:setup()
 
 -- <TILES>
 -- 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
@@ -622,13 +753,19 @@ function pal(c0,c1)
 
 -- <SPRITES>
 -- 000:0eeeeeeeeeddddddedddddddedddddddedddddddedddddddedddddddeddddddd
--- 001:eeeeee00dddddee0dddddde0dddddde0dddddde0dddddde0dddddde0dddddde0
--- 002:00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
--- 003:0000000000000000eeeeee00eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0
+-- 001:00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 -- 016:edddddddedddddddedddddddeeddddddfeeeeeeeffffffffffffffff0fffffff
--- 017:dddddde0dddddde0dddddde0dddddee0eeeeeef0fffffff0fffffff0ffffff00
--- 018:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeeeee0fffffff
--- 019:eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeef0fffffff0
+-- 017:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeeeee0fffffff
+-- 032:eeeeee00dddddee0dddddde0dddddde0dddddde0dddddde0dddddde0dddddde0
+-- 033:0000000000000000eeeeee00eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0
+-- 048:dddddde0dddddde0dddddde0dddddee0eeeeeef0fffffff0fffffff0ffffff00
+-- 049:eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeef0fffffff0
+-- 064:eeeeeeeedddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+-- 065:0000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+-- 080:ddddddddddddddddddddddddddddddddeeeeeeeeffffffffffffffffffffffff
+-- 081:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffff
+-- 096:000f000000fcf00000fcff000ffcccf0fcfccccf0fcccccf00fcccf0000fff00
+-- 097:f0000000ff000000fcf00000fccf0000fcccf000fcccff00fcff0000ff000000
 -- </SPRITES>
 
 -- <WAVES>
