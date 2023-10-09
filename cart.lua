@@ -9,7 +9,7 @@
 ---@alias frames number
 ---@alias spr fun(id:number,x:number,y:number,colorkey?:number,scale?:number,flip?:number,rotate?:number,w?:number,h?:number)
 
-DIRS={'up','down','left','right'}
+DIRS={'up','left','right','down'}
 
 ---@class Entity
 ---@field name string
@@ -125,7 +125,6 @@ F=0
 function TIC()
 	cls(0)
 	
-	if F==0 then Controls:setup() end
 
 	Game:run()
 
@@ -247,6 +246,8 @@ GameMenu=function(s)
 			poke(0x3FFB,352)
 			if l then
 				s:transTo(Game.states.runGame)
+				sb.p=true
+
 			end
 		else
 			sb.color=13
@@ -269,64 +270,13 @@ GameRun=function(s)
 		Controls:drw()
 		Controls:run()
 		Screen:update()
-		if Controls.result==target.n then
+		print(target.n,W/2,H/2-20,2)
+		if Controls.output.n==target.n then
 			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
 		end
 	end
 end
 
----@class Game
-Game={
-	---@type fun(s:Game,b:Button,wid:number)
-	drwTxtBtn=function(s,b,wid)
-		local cx=-(wid/2)*8
-		BaseCtrl.btnSection(b,'left',b.vec+Vectic.new(cx,0))
-		cx=cx+8
-		for i=1,wid do
-			BaseCtrl.btnSection(b,'center',b.vec+Vectic.new(cx,0))
-			cx=cx+8
-		end
-		BaseCtrl.btnSection(b,'right',b.vec+Vectic.new(cx,0))
-
-		local t_wid=print(b.c,W,H,12)
-		print(b.c,b.vec.x-t_wid/2,b.vec.y-4,12)
-	end,
-	states={
-		menu=GameMenu(Game),
-		runGame=GameRun(Game)
-	},
-	---@type fun(s:Game)
-	currentState=nil,
-	---@param s Game
-	run=function(s)
-		s:currentState()
-	end,
-	---@type fun(s:Game)
-	setup=function(s)
-		s.currentState=s.states.menu
-	end,
-	---@type fun(s:Game,nxt:fun(s:Game))
-	transTo=function(s,nxt)
-		local w=0
-		local x=0
-		local dur=30
-		Factory:add('transition',dur/2+1,
-		function()
-			rect(0,0,w,H,14)
-			w=w+(W/(dur/2))
-		end,
-		function()
-			s.currentState=nxt
-		end)
-		Factory:add('detransition',dur,
-		function()
-			rect(x,0,w,H,14)
-			x=x+(W/(dur/2))
-		end,
-		Factory.null,
-		dur/2)
-	end,
-}
 
 ---@class RunFunc
 ---@field name string Name of the RunFunc
@@ -541,8 +491,8 @@ OpCtrl={
 	---@param s OpCtrl
 	---@return Operation
 	rndOp=function(s)
-		local d=DIRS[math.random(1,4)]
-		return s.dirs[d]
+		local d=DIRS[math.random(1,3)]
+		return s.dirs[d].f
 	end
 }
 
@@ -572,7 +522,6 @@ NumCtrl={
 		left={min=1,max=9},
 		right={min=1,max=9}
 	},
-	setup=BaseCtrl.setup,
 	drw=BaseCtrl.drw,
 	---@param s NumCtrl
 	---@param dir direction
@@ -580,23 +529,26 @@ NumCtrl={
 		s.dirs[dir]=math.random(s.ranges[dir].min,s.ranges[dir].max)
 		s.btns[dir].c=tostring(s.dirs[dir])
 	end,
+	---@param s NumCtrl
+	reGenAll=function(s)
+		for _,d in pairs(DIRS) do s:reGen(d) end
+	end,
 	---Returns random direction
 	---@param _ NumCtrl
 	---@return direction
 	randDir=function(_)
-		local pd={'up','down','left','right'}
-		return pd[math.random(4)]
+		return DIRS[math.random(4)]
 	end,
 	---@param s NumCtrl
 	---@return number
-	randNum=function(s)
+	rndNum=function(s)
 		return s.dirs[s:randDir()]
 	end,
 	---Generate output using 2 random directions and given Operation
 	---@param s NumCtrl
 	---@param op Operation
 	outputUsing=function(s,op)
-		return op(s:randNum(), s:randNum())
+		return op(s:rndNum(), s:rndNum())
 	end,
 	---@param s NumCtrl
 	---@param btn direction
@@ -614,7 +566,12 @@ NumCtrl={
 	end,
 	check_press=BaseCtrl.check_press,
 	get_btn_pos=BaseCtrl.get_btn_pos,
-	drwBtn=BaseCtrl.drwBtn
+	drwBtn=BaseCtrl.drwBtn,
+	---@param s NumCtrl
+	setup=function(s)
+		BaseCtrl.setup(s)
+		s:reGenAll()
+	end
 }
 
 ---@class NumberEntity:Entity
@@ -655,7 +612,6 @@ Controls={
 		s.ops:drw()
 		s.nums:drw()
 		print(s.result.n,s.result.vec.x,s.result.vec.y)
-		print(s.output.n,s.output.vec.x,s.output.vec.y)
 	end,
 	---@param s Controls
 	hndl_input=function(s)
@@ -729,6 +685,63 @@ Controls={
 		s.nxt_in=s.nums
 		s.result.n=nil
 	end
+}
+
+Controls:setup()
+
+---@class Game
+Game={
+	---@type fun(s:Game,b:Button,wid:number)
+	drwTxtBtn=function(s,b,wid)
+		local cx=-(wid/2)*8
+		BaseCtrl.btnSection(b,'left',b.vec+Vectic.new(cx,0))
+		cx=cx+8
+		for i=1,wid do
+			BaseCtrl.btnSection(b,'center',b.vec+Vectic.new(cx,0))
+			cx=cx+8
+		end
+		BaseCtrl.btnSection(b,'right',b.vec+Vectic.new(cx,0))
+
+		local t_wid=print(b.c,W,H,12)
+		local pymod=0
+		if b.p then pymod=2 end
+		print(b.c,b.vec.x-t_wid/2,b.vec.y-4+pymod,12)
+	end,
+	states={
+		menu=GameMenu(Game),
+		runGame=GameRun(Game)
+	},
+	---@type fun(s:Game)
+	currentState=nil,
+	---@param s Game
+	run=function(s)
+		s:currentState()
+	end,
+	---@type fun(s:Game)
+	setup=function(s)
+		s.currentState=s.states.menu
+	end,
+	---@type fun(s:Game,nxt:fun(s:Game))
+	transTo=function(s,nxt)
+		local w=0
+		local x=0
+		local dur=30
+		Factory:add('transition',dur/2+1,
+		function()
+			rect(0,0,w,H,14)
+			w=w+(W/(dur/2))
+		end,
+		function()
+			s.currentState=nxt
+		end)
+		Factory:add('detransition',dur,
+		function()
+			rect(x,0,w,H,14)
+			x=x+(W/(dur/2))
+		end,
+		Factory.null,
+		dur/2)
+	end,
 }
 
 ---@param c0? number Original color
