@@ -263,15 +263,25 @@ GameRun=function(s)
 	---@type NumberEntity
 	local target={
 		n=NumCtrl:outputUsing(OpCtrl:rndOp()),
-		vec=Vectic.new(W/2,H/2)
+		vec=Controls.output.vec
 	}
+	local score=0
+	local tmax=150
+	local timer=tmax
+	local c=6
+
 	---@param s Game
 	return function(s)
 		Controls:drw()
 		Controls:run()
 		Screen:update()
-		print(target.n,W/2,H/2-20,2)
+		print(target.n,target.vec.x,target.vec.y,4)
+		if timer%50==0 or (timer/tmax<.2 and c~=2) then c=c-1 end
+		rect(0,0,W*timer/tmax,10,c)
+		timer=timer-1
 		if Controls.output.n==target.n then
+			timer=tmax
+			c=5
 			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
 		end
 	end
@@ -635,20 +645,30 @@ Controls={
 	---@param s Controls
 	_anim_output=function(s)
 		sfx(1,10)
+		-- Factory:add('set-output',10,
+		-- 	function()
+
+		-- 	end)
 	end,
 	---@param s Controls
 	---@param d direction
 	_anim_change_result=function(s,d)
+		local duration=15
 		local x,y=s.nxt_in:get_btn_pos(d)
-		Factory:add(s.name..'change-result-lazer',10,
-		function()
-			line(s.result.vec.x,s.result.vec.y,x,y,2+(F//3)%2)
-		end,
-		Factory.null)
+		local speed_vec=(s.result.vec-Vectic.new(x,y))/duration
+		local p=Vectic.new(x,y)
+		local sf=F
+		Factory:add(s.name..'-change-result-lazer-'..s.nxt_in.name,duration,
+			function()
+				p=p+speed_vec
+				circ(p.x,p.y,5+5*math.sin((F-sf)/4),12)
+				-- line(s.result.vec.x,s.result.vec.y,x,y,2+(F//3)%2)
+			end,
+			Factory.null)
 
 		Factory:shake(s.result,7,2)
 
-		sfx(0,20)
+		sfx(0,20,10)
 	end,
 	---@param s Controls
 	---@param d direction
@@ -719,7 +739,7 @@ Game={
 	end,
 	---@type fun(s:Game)
 	setup=function(s)
-		s.currentState=s.states.menu
+		s.currentState=s.states.runGame ----------------------------------------------------------------- TODO: CHANGE
 	end,
 	---@type fun(s:Game,nxt:fun(s:Game))
 	transTo=function(s,nxt)
@@ -788,7 +808,7 @@ Game:setup()
 -- </WAVES>
 
 -- <SFX>
--- 000:0119013a014b015c116d217e718f9180b1a1c1c3d1d4e1f5f126f107f109f109f100f100f100f100f100f100f100f100f100f100f100f100f100f100107000000000
+-- 000:0109011a111a111b112b112d213e214f3161317241a441c541d541e641e641d641d541b5418431623151314e213c212b112a111a011a011a010b010b137000000000
 -- 001:0119012c0120013111242126f127f12cf11cf113019901bd01d001e401f7f10af100f100f100f100f100f100f100f100f100f100f100f100f100f100107000000000
 -- </SFX>
 
