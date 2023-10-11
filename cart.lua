@@ -266,25 +266,51 @@ GameRun=function(s)
 		vec=Controls.output.vec
 	}
 	local score=0
-	local tmax=150
+	local tmax=900
 	local timer=tmax
 	local c=6
 
+	local showScore=function()
+		local y=16
+		local w=print('SCORE: '..score,W,H)
+		rect((W-w)/2-2,y-3,w+2,12,14)
+		CPrint('SCORE: '..score,W/2-1,y+1,15)
+		CPrint('SCORE: '..score,W/2,y,12)
+	end
+
+	local showTarget=function()
+		CPrint('target:',W/2,target.vec.y-10,4)
+		CPrint(target.n,target.vec.x,target.vec.y,4)
+	end
+
 	---@param s Game
 	return function(s)
-		Controls:drw()
-		Controls:run()
-		Screen:update()
-		print(target.n,target.vec.x,target.vec.y,4)
-		if timer%50==0 or (timer/tmax<.2 and c~=2) then c=c-1 end
-		rect(0,0,W*timer/tmax,10,c)
-		timer=timer-1
+		Controls.target_ref=target
+		local pts=(10*#Controls.hist)*(timer/tmax)//1
+		if pts<1 then pts=1 end
 		if Controls.output.n==target.n then
+			score=math.floor(score+pts)
+			Controls.hist={}
 			timer=tmax
 			c=5
 			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
 		end
+		Controls:drw()
+		Controls:run()
+		Screen:update()
+		if (timer%200==0) and c~=2 then c=c-1 end
+		rect(0,0,W*timer/tmax,10,c)
+		rectb(0,0,W,10,12)
+		timer=timer-1
+		if timer<=1 then s:transTo(s.states.menu) end
+		showScore()
+		showTarget()
 	end
+end
+
+CPrint=function(t,x,y,c)
+	local w=print(t,W,H)
+	return print(t,x-w/2,y,c)
 end
 
 
@@ -527,10 +553,10 @@ NumCtrl={
 	dirs={up=0,down=0,left=0,right=0},
 	---@type {[direction]: {min:number, max:number}}
 	ranges={
-		up={min=1,max=9},
-		down={min=1,max=9},
-		left={min=1,max=9},
-		right={min=1,max=9}
+		up={min=-9,max=9},
+		down={min=-9,max=9},
+		left={min=-9,max=9},
+		right={min=-9,max=9}
 	},
 	drw=BaseCtrl.drw,
 	---@param s NumCtrl
@@ -603,9 +629,11 @@ Controls={
 		y=3*H/4,
 	},
 	---@type NumberEntity
-	result=CreateNum('result',nil,W/2,H/2),
+	target_ref={},
 	---@type NumberEntity
-	output=CreateNum('output',nil,W/2,H/2-10),
+	result=CreateNum('result',nil,W/2,H/2+10),
+	---@type NumberEntity
+	output=CreateNum('output',nil,W/2,H/2-20),
 	---@type Operation
 	operation=nil,
 	hist={},
@@ -621,20 +649,31 @@ Controls={
 		circ(x-1,y,20,5)
 		s.ops:drw()
 		s.nums:drw()
-		print(s.result.n,s.result.vec.x,s.result.vec.y)
+		CPrint('result:',s.result.vec.x,s.result.vec.y-10,12)
+		local r='?'
+		if s.result.n~=nil then r=s.result.n end
+		CPrint(r,s.result.vec.x,s.result.vec.y,12)
+	end,
+	reset=function(s,d)
+		s.output.n=s.result.n
+		s.result.n=nil
+		s.operation=nil
+		s.nxt_in=s.nums
 	end,
 	---@param s Controls
 	hndl_input=function(s)
 		for d,_ in pairs(s.nums.dirs) do
 			if s.nxt_in:check_press(d) then
 				if s.nxt_in.btns[d].c=='=' then
+					local x,y=s.nxt_in:get_btn_pos(d)
 					s:_anim_output()
 					s:_btn_press(d)
-					s.output.n=s.result.n
-					s.result.n=nil
-					s.hist={}
-					s.operation=nil
-					s.nxt_in=s.nums
+					Factory:add('submit-score',10,
+						function()
+						end,
+						function()
+							s:reset(d)
+						end)
 				else
 					s:_anim_change_result(d)
 					s:_btn_press(d)
@@ -739,7 +778,7 @@ Game={
 	end,
 	---@type fun(s:Game)
 	setup=function(s)
-		s.currentState=s.states.runGame ----------------------------------------------------------------- TODO: CHANGE
+		s.currentState=s.states.menu ----------------------------------------------------------------- TODO: CHANGE
 	end,
 	---@type fun(s:Game,nxt:fun(s:Game))
 	transTo=function(s,nxt)
