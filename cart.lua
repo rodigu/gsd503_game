@@ -124,7 +124,6 @@ F=0
 
 function TIC()
 	cls(0)
-	
 
 	Game:run()
 
@@ -224,44 +223,130 @@ Factory={
 	---@param a number
 	---@param b number
 	float=function(s,obj,t)
+	end,
+	---@param s Factory
+	---@param n string
+	---@param f function
+	---@param t number
+	delayCall=function(s,n,f,t)
+		s:add(n,t,s.null,f)
 	end
 }
 
+---@class Selection
+---@field drw fun(s: Game)
+---@field slct number
+
 ---@param s Game
-GameMenu=function(s)
-	---@type Button
-	local sb={
-		c='start',
-		color=13,
-		name='start-button',
-		p=false,
-		vec=Vectic.new(W/2,H/2-20),
-		siz=Vectic.new(7*8,16)
-	}
+---@param buttons Button[]
+---@param funcs fun(s: Game)[]
+---@return Selection
+local CreateSelection=function (s, buttons, funcs)
+	local t={}
+	t.slct=1
 
-	return function(s)
-		local x,y,l=mouse()
-		if PtCol(Vectic.new(x,y),sb) then
-			sb.color=6
-			poke(0x3FFB,352)
-			if l then
-				s:transTo(Game.states.runGame)
-				sb.p=true
-
-			end
-		else
-			sb.color=13
-			poke(0x3FFB,353)
+	local function ctrls()
+		if btnp(NumCtrl.bp_map['up']) then
+			t.slct=t.slct-1
+		elseif btnp(NumCtrl.bp_map['down']) then
+			t.slct=t.slct+1
 		end
 
-		s:drwTxtBtn(sb,sb.siz.x/8-2)
+		if btnp(OpCtrl.bp_map['down']) then
+			funcs[t.slct](s)
+		end
+
+		if t.slct<1 then t.slct=#buttons end
+		if t.slct>#buttons then t.slct=1 end
 	end
+
+	---@param s Game
+	t.drw=function(s)
+		ctrls()
+		for i,b in ipairs(buttons) do
+			if i==t.slct then
+				b.color=6
+			else
+				b.color=13
+			end
+			s:drwTxtBtn(b, b.siz.x/8-2)
+		end
+	end
+	
+	return t
 end
 
 ---@param s Game
-GameRun=function(s)
+GameMenu=function()
+	---@type Button[]
+	local bs={
+		{
+			c='start',
+			color=13,
+			name='start-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2-20),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='options',
+			color=13,
+			name='options-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2),
+			siz=Vectic.new(7*8,16)
+		},
+	}
+
+	local fs={
+		function (s)
+			s:transTo(s.states.runGame)
+		end
+	}
+
+	local slct=nil
+
+	return function(s)
+		if slct==nil then slct=CreateSelection(s, bs, fs) end
+		slct.drw(s)
+	end
+end
+
+---@param v Vectic
+function CreateExplode(v)
+	local max=5
+	local maxS=5
+
+	---@class Particle
+	---@field pos Vectic
+	---@field speed Vectic
+	---@field size number
+
+	---@type Particle[]
+	local ps={}
+	for i=1,max do
+		ps[i]={
+			pos=v:copy(),
+			speed=Vectic.new(math.random(-2,2),math.random(-2,2)),
+			size=.5
+		}
+	end
+
+	local startF=F
+	
+	return function()
+		for _,p in ipairs(ps) do
+			circb(p.pos.x, p.pos.y, p.size, 2)
+			p.pos=p.pos+p.speed
+			p.size=math.sin((F - startF)/3.2)*maxS
+		end
+	end
+end
+
+GameRun=function()
 	---@type NumberEntity
 	local target={
+		name='target',
 		n=NumCtrl:outputUsing(OpCtrl:rndOp()),
 		vec=Controls.output.vec
 	}
@@ -284,11 +369,23 @@ GameRun=function(s)
 	end
 
 	---@param s Game
+	local function endGame()
+		score=0
+		tmax=900
+		timer=tmax
+		c=6
+		Controls:reset()
+		target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
+	end
+
+	---@param s Game
 	return function(s)
 		Controls.target_ref=target
 		local pts=(10*#Controls.hist)*(timer/tmax)//1
 		if pts<1 then pts=1 end
-		if Controls.output.n==target.n then
+		if Controls.result.n==target.n then
+			Factory:add('explosion', 20, CreateExplode(target.vec),Factory.null)
+			Factory:shake(target,10,5)
 			score=math.floor(score+pts)
 			Controls.hist={}
 			timer=tmax
@@ -296,13 +393,16 @@ GameRun=function(s)
 			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
 		end
 		Controls:drw()
-		Controls:run()
+		Controls:run(tostring(target.n))
 		Screen:update()
 		if (timer%200==0) and c~=2 then c=c-1 end
 		rect(0,0,W*timer/tmax,10,c)
 		rectb(0,0,W,10,12)
 		timer=timer-1
-		if timer<=1 then s:transTo(s.states.menu) end
+		if timer<=1 then
+			s:transTo(s.states.menu)
+			endGame()
+		end
 		showScore()
 		showTarget()
 	end
@@ -383,6 +483,13 @@ BaseOps={
 ---@field p boolean Is button pressed
 ---@field c string Content of the button
 ---@field color number
+
+ButtonFuncs={
+	---@param b Button
+	unpush=function(b)
+		Factory:add('unpush-'..b.c, 5, Factory.null, function() b.p=false end)
+	end
+}
 
 ---@class BaseCtrl:Entity
 BaseCtrl={
@@ -504,7 +611,7 @@ OpCtrl={
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:Operation} Control directions (up down left right)
-	dirs={up=BaseOps.mul,down=BaseOps.zer,left=BaseOps.sub,right=BaseOps.sum},
+	dirs={up=BaseOps.mul,down=BaseOps.div,left=BaseOps.sub,right=BaseOps.sum},
 	---@param s OpCtrl
 	setup=function(s)
 		BaseCtrl.setup(s)
@@ -640,8 +747,9 @@ Controls={
 	nums=NumCtrl,
 	ops=OpCtrl,
 	---@param s Controls
-	run=function(s)
-		s:hndl_input()
+	---@param target string
+	run=function(s, target)
+		s:hndl_input(target)
 	end,
 	---@param s Controls
 	drw=function(s)
@@ -654,17 +762,19 @@ Controls={
 		if s.result.n~=nil then r=s.result.n end
 		CPrint(r,s.result.vec.x,s.result.vec.y,12)
 	end,
-	reset=function(s,d)
+	---@param s Controls
+	reset=function(s)
 		s.output.n=s.result.n
 		s.result.n=nil
 		s.operation=nil
 		s.nxt_in=s.nums
 	end,
 	---@param s Controls
-	hndl_input=function(s)
+	---@param target string
+	hndl_input=function(s, target)
 		for d,_ in pairs(s.nums.dirs) do
 			if s.nxt_in:check_press(d) then
-				if s.nxt_in.btns[d].c=='=' then
+				if s.nxt_in.btns[d].c==target then
 					local x,y=s.nxt_in:get_btn_pos(d)
 					s:_anim_output()
 					s:_btn_press(d)
@@ -767,14 +877,14 @@ Game={
 		print(b.c,b.vec.x-t_wid/2,b.vec.y-4+pymod,12)
 	end,
 	states={
-		menu=GameMenu(Game),
-		runGame=GameRun(Game)
+		menu=GameMenu(),
+		runGame=GameRun()
 	},
 	---@type fun(s:Game)
 	currentState=nil,
 	---@param s Game
 	run=function(s)
-		s:currentState()
+		s.currentState(s)
 	end,
 	---@type fun(s:Game)
 	setup=function(s)
