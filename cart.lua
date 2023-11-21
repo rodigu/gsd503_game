@@ -6,6 +6,83 @@
 -- version: 0.1
 -- script:  lua
 
+---@class Difficulty
+---@field title string
+---@field time integer
+---@field speedup number speedup increment for every correct answer
+---@field range {min: number, max:number}
+---@field operations table<direction, Operation>
+
+
+BaseOps={
+	---@type Operation
+	sum={
+		f=function(a,b) return a+b end,
+		c='+'
+	},
+	---@type Operation
+	sub={
+		f=function(a,b) return a-b end,
+		c='-'
+	},
+	---@type Operation
+	mul={
+		f=function(a,b) return a*b end,
+		c='x'
+	},
+	---@type Operation
+	div={
+		f=function(a,b) return a/b end,
+		c='/'
+	},
+	---@type Operation
+	zer={
+		f=function(a,b) return 0 end,
+		c='='
+	},
+}
+
+---@param up Operation
+---@param down Operation
+---@param left Operation
+---@param right Operation
+---@return table<direction, Operation>
+function GenOps(up, down, left, right)
+	return {
+		up=up,
+		down=down,
+		left=left,
+		right=right
+	}
+end
+
+---@type table<string,Difficulty> Difficulties
+DIFFS={
+	easy={
+		title='easy',
+		time=1200,
+		speedup=0,
+		range={min=1,max=9},
+		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum)
+	},
+	medium={
+		title='medium',
+		time=1000,
+		speedup=1,
+		range={min=1,max=9},
+		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum)
+	},
+	hard={
+		title='hard',
+		time=900,
+		speedup=1,
+		range={min=-9,max=9},
+		operations=GenOps(BaseOps.mul,BaseOps.sub,BaseOps.sum,BaseOps.div)
+	}
+}
+
+DIFFICULTY='easy'
+
 ---@alias frames number
 ---@alias spr fun(id:number,x:number,y:number,colorkey?:number,scale?:number,flip?:number,rotate?:number,w?:number,h?:number)
 
@@ -315,7 +392,7 @@ end
 ---@param v Vectic
 function CreateExplode(v)
 	local max=5
-	local maxS=5
+	local maxS=8
 
 	---@class Particle
 	---@field pos Vectic
@@ -327,18 +404,21 @@ function CreateExplode(v)
 	for i=1,max do
 		ps[i]={
 			pos=v:copy(),
-			speed=Vectic.new(math.random(-2,2),math.random(-2,2)),
-			size=.5
+			speed=Vectic.new(math.random(-2,2),math.random(-4,-2)),
+			size=0
 		}
 	end
 
 	local startF=F
+	local g=Vectic.new(0,.2)
 	
 	return function()
 		for _,p in ipairs(ps) do
-			circb(p.pos.x, p.pos.y, p.size, 2)
+			circb(p.pos.x, p.pos.y, p.size, 3)
+			circb(p.pos.x, p.pos.y, p.size - 2, 2)
 			p.pos=p.pos+p.speed
-			p.size=math.sin((F - startF)/3.2)*maxS
+			p.speed=p.speed+g
+			p.size=math.sin((F - startF)/12)*maxS
 		end
 	end
 end
@@ -351,7 +431,7 @@ GameRun=function()
 		vec=Controls.output.vec
 	}
 	local score=0
-	local tmax=900
+	local tmax=DIFFS[DIFFICULTY].time
 	local timer=tmax
 	local c=6
 
@@ -368,10 +448,14 @@ GameRun=function()
 		CPrint(target.n,target.vec.x,target.vec.y,4)
 	end
 
+	OpCtrl:setDiff()
+	NumCtrl:setDiff()
+	Controls:setup()
+
 	---@param s Game
 	local function endGame()
 		score=0
-		tmax=900
+		tmax=tmax-DIFFS[DIFFICULTY].speedup
 		timer=tmax
 		c=6
 		Controls:reset()
@@ -381,16 +465,22 @@ GameRun=function()
 	---@param s Game
 	return function(s)
 		Controls.target_ref=target
-		local pts=(10*#Controls.hist)*(timer/tmax)//1
+		local time_taken=tmax-timer
+		local pts=(tmax*(1+#Controls.hist)/(time_taken+2))-2
 		if pts<1 then pts=1 end
 		if Controls.result.n==target.n then
-			Factory:add('explosion', 20, CreateExplode(target.vec),Factory.null)
-			Factory:shake(target,10,5)
-			score=math.floor(score+pts)
-			Controls.hist={}
-			timer=tmax
-			c=5
-			target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
+			Factory:delayCall('explode-sfx', 
+			function()
+				sfx(1,25)
+				Factory:add('explosion', 60, CreateExplode(target.vec),Factory.null)
+				Factory:shake(target,10,5)
+				score=math.floor(score+pts)
+				Controls.hist={}
+				timer=tmax
+				c=5
+				target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
+				Controls:reset()
+			end, 10)
 		end
 		Controls:drw()
 		Controls:run(tostring(target.n))
@@ -450,34 +540,6 @@ Screen={
 ---@class Operation
 ---@field f fun(a:number,b:number):number
 ---@field c string
-
-BaseOps={
-	---@type Operation
-	sum={
-		f=function(a,b) return a+b end,
-		c='+'
-	},
-	---@type Operation
-	sub={
-		f=function(a,b) return a-b end,
-		c='-'
-	},
-	---@type Operation
-	mul={
-		f=function(a,b) return a*b end,
-		c='x'
-	},
-	---@type Operation
-	div={
-		f=function(a,b) return a/b end,
-		c='/'
-	},
-	---@type Operation
-	zer={
-		f=function(a,b) return 0 end,
-		c='='
-	},
-}
 
 ---@class Button: Entity
 ---@field p boolean Is button pressed
@@ -539,6 +601,7 @@ BaseCtrl={
 	---@param s BaseCtrl
 	setup=function(s)
 		for d,d_cont in pairs(s.dirs) do
+			trace(d)
 			local content=tostring(d_cont)
 			if type(d_cont)~="number" then content=d_cont.c end
 			s.btns[d]={
@@ -613,6 +676,10 @@ OpCtrl={
 	---@type {[direction]:Operation} Control directions (up down left right)
 	dirs={up=BaseOps.mul,down=BaseOps.div,left=BaseOps.sub,right=BaseOps.sum},
 	---@param s OpCtrl
+	setDiff=function(s)
+		s.dirs=DIFFS[DIFFICULTY].operations
+	end,
+	---@param s OpCtrl
 	setup=function(s)
 		BaseCtrl.setup(s)
 		s.btns['up'].color=3
@@ -632,10 +699,9 @@ OpCtrl={
 	get_btn_pos=BaseCtrl.get_btn_pos,
 	drwBtn=BaseCtrl.drwBtn,
 	---@param s OpCtrl
-	---@return Operation
 	rndOp=function(s)
 		local d=DIRS[math.random(1,3)]
-		return s.dirs[d].f
+		return DIFFS[DIFFICULTY].operations[d].f
 	end
 }
 
@@ -667,6 +733,13 @@ NumCtrl={
 	},
 	drw=BaseCtrl.drw,
 	---@param s NumCtrl
+	setDiff=function(s)
+		local r=DIFFS[DIFFICULTY].range
+		for n,_ in pairs(s.ranges) do
+			s.ranges[n]={min=r.min,max=r.max}
+		end
+	end,
+	---@param s NumCtrl
 	---@param dir direction
 	reGen=function(s,dir)
 		s.dirs[dir]=math.random(s.ranges[dir].min,s.ranges[dir].max)
@@ -689,7 +762,6 @@ NumCtrl={
 	end,
 	---Generate output using 2 random directions and given Operation
 	---@param s NumCtrl
-	---@param op Operation
 	outputUsing=function(s,op)
 		return op(s:rndNum(), s:rndNum())
 	end,
@@ -776,7 +848,6 @@ Controls={
 			if s.nxt_in:check_press(d) then
 				if s.nxt_in.btns[d].c==target then
 					local x,y=s.nxt_in:get_btn_pos(d)
-					s:_anim_output()
 					s:_btn_press(d)
 					Factory:add('submit-score',10,
 						function()
@@ -790,14 +861,6 @@ Controls={
 				end
 			end
 		end
-	end,
-	---@param s Controls
-	_anim_output=function(s)
-		sfx(1,10)
-		-- Factory:add('set-output',10,
-		-- 	function()
-
-		-- 	end)
 	end,
 	---@param s Controls
 	---@param d direction
@@ -957,8 +1020,8 @@ Game:setup()
 -- </WAVES>
 
 -- <SFX>
--- 000:0109011a111a111b112b112d213e214f3161317241a441c541d541e641e641d641d541b5418431623151314e213c212b112a111a011a011a010b010b137000000000
--- 001:0119012c0120013111242126f127f12cf11cf113019901bd01d001e401f7f10af100f100f100f100f100f100f100f100f100f100f100f100f100f100107000000000
+-- 000:0009001a101a101b102b102d203e204f3061307240a440c540d540e640e640d640d540b5408430623051304e203c202b102a101a001a001a000b000b137000000000
+-- 001:0019002c0020003110242026f027f02cf01cf013009900bd00d000e400f7f00af000f000f000f000f000f000f000f000f000f000f000f000f000f000107000000000
 -- </SFX>
 
 -- <TRACKS>
