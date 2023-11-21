@@ -70,7 +70,7 @@ DIFFS={
 		time=1000,
 		speedup=1,
 		range={min=1,max=9},
-		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum)
+		operations=GenOps(BaseOps.mul,BaseOps.sub,BaseOps.sum,BaseOps.div)
 	},
 	hard={
 		title='hard',
@@ -81,7 +81,7 @@ DIFFS={
 	}
 }
 
-DIFFICULTY='easy'
+DIFFICULTY='medium'
 
 ---@alias frames number
 ---@alias spr fun(id:number,x:number,y:number,colorkey?:number,scale?:number,flip?:number,rotate?:number,w?:number,h?:number)
@@ -451,6 +451,7 @@ GameRun=function()
 	OpCtrl:setDiff()
 	NumCtrl:setDiff()
 	Controls:setup()
+	Controls.nxt_in=NumCtrl
 
 	---@param s Game
 	local function endGame()
@@ -576,7 +577,7 @@ BaseCtrl={
 
 		if pos==nil then pos=b.vec end
 		
-		pal(13,b.color)
+		pal(14,b.color)
 		spr(spr_id,pos.x-8,pos.y-8,0,1,0,0,1,2)
 		pal()
 	end,
@@ -592,7 +593,7 @@ BaseCtrl={
 		local t_wid=print(b.c,2*W,2*H,0,false)
 		local spr_id=256
 		if b.p then spr_id=258 end
-		pal(13,b.color)
+		pal(14,b.color)
 		BaseCtrl.btnSection(b,'left',b.vec+s.vec)
 		BaseCtrl.btnSection(b,'right',b.vec+Vectic.new(8,0)+s.vec)
 		pal()
@@ -601,14 +602,13 @@ BaseCtrl={
 	---@param s BaseCtrl
 	setup=function(s)
 		for d,d_cont in pairs(s.dirs) do
-			trace(d)
 			local content=tostring(d_cont)
 			if type(d_cont)~="number" then content=d_cont.c end
 			s.btns[d]={
 				p=false,
 				vec=Vectic.new(),
 				c=content,
-				color=13
+				color=14
 			}
 		end
 		local mod=17
@@ -997,18 +997,18 @@ Game:setup()
 -- </TILES>
 
 -- <SPRITES>
--- 000:0eeeeeeeeeddddddedddddddedddddddedddddddedddddddedddddddeddddddd
--- 001:00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
--- 016:edddddddedddddddedddddddeeddddddfeeeeeeeffffffffffffffff0fffffff
--- 017:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeeeee0fffffff
--- 032:eeeeee00dddddee0dddddde0dddddde0dddddde0dddddde0dddddde0dddddde0
--- 033:0000000000000000eeeeee00eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0
--- 048:dddddde0dddddde0dddddde0dddddee0eeeeeef0fffffff0fffffff0ffffff00
--- 049:eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeef0fffffff0
--- 064:eeeeeeeedddddddddddddddddddddddddddddddddddddddddddddddddddddddd
--- 065:0000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
--- 080:ddddddddddddddddddddddddddddddddeeeeeeeeffffffffffffffffffffffff
--- 081:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffff
+-- 000:0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+-- 001:00000000000000000fffffffffffffffffffffffffffffffffffffffffffffff
+-- 016:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeeeeeffffffffffffffff0fffffff
+-- 017:ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0fffffff
+-- 032:eeeeee00eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeee0
+-- 033:0000000000000000ffffff00fffffff0fffffff0fffffff0fffffff0fffffff0
+-- 048:eeeeeee0eeeeeee0eeeeeee0eeeeeee0eeeeeef0fffffff0fffffff0ffffff00
+-- 049:fffffff0fffffff0fffffff0fffffff0fffffff0fffffff0fffffff0fffffff0
+-- 064:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+-- 065:0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffff
+-- 080:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffff
+-- 081:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 -- 096:000f000000fcf00000fcff000ffcccf0fcfccccf0fcccccf00fcccf0000fff00
 -- 097:f0000000ff000000fcf00000fccf0000fcccf000fcccff00fcff0000ff000000
 -- </SPRITES>
