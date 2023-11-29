@@ -6,13 +6,24 @@
 -- version: 0.1
 -- script:  lua
 
+GLOBAL={
+	JUICE=true,
+	DIFFICULTY='medium',
+	HIGH=0,
+	VOL=10
+}
+
+if pmem(0) then
+	GLOBAL.HIGH=pmem(0)
+end
+
 ---@class Difficulty
 ---@field title string
 ---@field time integer
 ---@field speedup number speedup increment for every correct answer
 ---@field range {min: number, max:number}
 ---@field operations table<direction, Operation>
-
+---@field next string
 
 BaseOps={
 	---@type Operation
