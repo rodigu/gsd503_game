@@ -385,7 +385,10 @@ local CreateSelection=function (s, buttons, funcs)
 		end
 
 		if btnp(OpCtrl.bp_map['down']) then
+			local b=buttons[t.slct]
+			b.p=true
 			funcs[t.slct](s)
+			Factory:delayCall(b.name..'unpress-delay',function() b.p=false end, 15)
 		end
 
 		if t.slct<1 then t.slct=#buttons end
@@ -402,6 +405,11 @@ local CreateSelection=function (s, buttons, funcs)
 				b.color=13
 			end
 			s:drwTxtBtn(b, b.siz.x/8-2)
+			if i==t.slct then
+				local bx,by=(b.vec-b.siz/2-2):xy()
+				local sx,sy=(b.siz+2):xy()
+				rectb(bx,by,sx,sy,12)
+			end
 		end
 	end
 	
@@ -410,6 +418,7 @@ end
 
 ---@param s Game
 GameMenu=function()
+	local playSong=true
 	---@type Button[]
 	local bs={
 		{
@@ -417,7 +426,7 @@ GameMenu=function()
 			color=13,
 			name='start-button',
 			p=false,
-			vec=Vectic.new(W/2,H/2-20),
+			vec=Vectic.new(W/2,H/2-10),
 			siz=Vectic.new(7*8,16)
 		},
 		{
@@ -425,22 +434,199 @@ GameMenu=function()
 			color=13,
 			name='options-button',
 			p=false,
-			vec=Vectic.new(W/2,H/2),
+			vec=Vectic.new(W/2,H/2+10),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='quit',
+			color=1,
+			name='quit-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2+40),
 			siz=Vectic.new(7*8,16)
 		},
 	}
 
 	local fs={
+		---@param s Game
 		function (s)
 			s:transTo(s.states.runGame)
+			Sound(4,26,20)
+			Factory:del('wave-MaTIC')
+			-- music()
+			Factory:delayCall('false-playSong',
+			function ()
+				playSong=false
+			end,40)
+		end,
+		---@param s Game
+		function (s)
+			s:transTo(s.states.settings)
+			Sound(4,26,20)
+			Factory:del('wave-MaTIC')
+		end,
+		---@param s Game
+		function (s)
+			exit()
 		end
 	}
 
 	local slct=nil
 
+	local scale=5
+	local w=print('MaTIC',W,H,1,true,scale)
+	---@type table<number,Entity>
+	local glyphs={}
+	local lanes=50
+	for i=1,200,1 do
+		table.insert(glyphs,{
+			name=tostring(math.random(9)),
+			vec=Vectic.new(math.random(lanes)*W/lanes-W/lanes,math.random(-H/2,H)),
+			speed=Vectic.new(0,math.random()+.2),
+			len=math.random(2,3)
+		})
+	end
+	return function(s)
+		if playSong and GLOBAL.JUICE then
+			-- music(7)
+			playSong=false
+		end
+		for _,g in ipairs(glyphs) do
+			if _<#glyphs*.7 then
+				local m=0
+				local tc=12
+				if GLOBAL.JUICE then
+					m=math.sin(F/30)*4
+					tc=10
+				end
+				print('MaTIC',W/2-w/2,10+m,tc,true,scale)
+			end
+			if not GLOBAL.JUICE then
+				goto continue
+			end
+			for i=1,g.len,1 do
+				local c=15
+				if i==1 then c=1 end
+				print(math.random(9),g.vec.x,g.vec.y-6*i,c,true,1,true)
+			end
+			print(g.name,g.vec.x,g.vec.y,2,true,1,true)
+			if F%tonumber(g.name)==0 then
+				g.name=tostring(math.random(9))
+			end
+			g.vec=g.vec+g.speed
+			if g.vec.y>H*1.5 then
+				g.vec=Vectic.new(math.random(lanes)*W/lanes-W/lanes,math.random(-H/2,-10))
+			end
+		    ::continue::
+		end
+		if slct==nil then
+			slct=CreateSelection(s, bs, fs)
+		end
+		slct.drw(s)
+		local ctxt='Created by rmorais2@illinois.edu for GSD 503 (Fall)'
+		local ctxtw=print(ctxt,W,H,2,false,1,true)
+		rect(0,H-10,ctxtw,9,0)
+		print(ctxt,0,H-8,15,false,1,true)
+		local vtxt='v0.1'
+		local vtxtw=print(vtxt,W,H,2,false,1,true)
+		print(vtxt,W-vtxtw,1,12,false,1,true)
+	end
+end
+
+GameSettings=function()
+	---@type Button[]
+	local bs={
+		{
+			c=GLOBAL.DIFFICULTY,
+			color=13,
+			name='difficulty-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2-40),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='juice on',
+			color=13,
+			name='juice-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2-20),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='volume '..GLOBAL.VOL,
+			color=13,
+			name='volume-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='return',
+			color=13,
+			name='return-menu-button',
+			p=false,
+			vec=Vectic.new(W/2,H/2+50),
+			siz=Vectic.new(7*8,16)
+		}
+	}
+
+	local fs={
+		---@param s Game
+		function (s)
+			local b=bs[1]
+			Sound(3,30,20)
+			if b.c=='' then return end
+			GLOBAL.DIFFICULTY=DIFFS[GLOBAL.DIFFICULTY].next
+			b.c=''
+			local t_wid=print(GLOBAL.DIFFICULTY,W,H)
+			
+			NumCtrl:setDiff(GLOBAL.DIFFICULTY)
+			OpCtrl:setDiff(GLOBAL.DIFFICULTY)
+
+			Factory:waveStr(GLOBAL.DIFFICULTY,b.vec-Vectic.new(t_wid/2,4),20,3,2,12)
+			Factory:delayCall('change-difficulty-button',function ()
+				b.c=GLOBAL.DIFFICULTY
+			end, 15)
+		end,
+		---@param s Game
+		function (s)
+			local b=bs[2]
+			Sound(3,30,20)
+			if b.c=='' then return end
+			local ch='juice on'
+			if GLOBAL.JUICE==true then
+				ch='juice off'
+				GLOBAL.JUICE=false
+			else
+				GLOBAL.JUICE=true
+			end
+			b.c=''
+			local t_wid=print(ch,W,H)
+			Factory:waveStr(ch,b.vec-Vectic.new(t_wid/2,4),20,3,2,12)
+			Factory:delayCall('change-juice-button',function ()
+				b.c=ch
+			end, 15)
+		end,
+		---@param s Game
+		function (s)
+			GLOBAL.VOL=GLOBAL.VOL+1
+			if GLOBAL.VOL>15 then GLOBAL.VOL=0 end
+			bs[3].c='volume '..GLOBAL.VOL
+			Sound(4,26,20)
+		end,
+		---@param s Game
+		function (s)
+			s:transTo(s.states.menu)
+			Sound(4,26,20)
+		end
+	}
+
+	local slct
+
 	return function(s)
 		if slct==nil then slct=CreateSelection(s, bs, fs) end
 		slct.drw(s)
+		-- CPrint('Menu song: Bella Ciao',W/2,H/2+20,12)
 	end
 end
 
@@ -487,7 +673,7 @@ GameRun=function()
 		vec=Controls.output.vec
 	}
 	local score=0
-	local tmax=DIFFS[DIFFICULTY].time
+	local tmax=DIFFS[GLOBAL.DIFFICULTY].time
 	local timer=tmax
 	local c=6
 
