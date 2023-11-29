@@ -665,6 +665,111 @@ function CreateExplode(v)
 	end
 end
 
+LastSession={
+	score=0,
+	time=0,
+	multi=1
+}
+
+GameOver=function()
+	
+	---@type Button[]
+	local bs={
+		{
+			c='try again',
+			color=13,
+			name='try-again-button-game-over',
+			p=false,
+			vec=Vectic.new(W/2,H/2+20),
+			siz=Vectic.new(7*8,16)
+		},
+		{
+			c='menu',
+			color=13,
+			name='return-menu-button-game-over',
+			p=false,
+			vec=Vectic.new(W/2,H/2+40),
+			siz=Vectic.new(7*8,16)
+		}
+	}
+
+	local rerun=true
+
+	local fs={
+		---@param s Game
+		function (s)
+			s:transTo(s.states.runGame)
+			Sound(4,26,20)
+			rerun=true
+			pmem(0,GLOBAL.HIGH)
+		end,
+		---@param s Game
+		function (s)
+			s:transTo(s.states.menu)
+			Sound(4,26,20)
+			rerun=true
+			pmem(0,GLOBAL.HIGH)
+		end
+	}
+
+	local slct
+
+	function midPrint(txt,y,c)
+		local w=print(txt,W,H)
+		if not GLOBAL.JUICE then c=12 end
+		print(txt,W/2-w/2,y,c)
+	end
+
+	local showScore=function()
+		midPrint('TIME PLAYED: '..LastSession.time,H/2-30,6)
+		midPrint('SCORE: '..LastSession.score,H/2-20,6)
+		midPrint('HIGH SCORE: '..tostring(GLOBAL.HIGH),H/2-10,2)
+	end
+
+	local ba=0
+	local addBonus=function()
+		if LastSession.time>50 then
+			LastSession.time=LastSession.time-50
+			ba=ba+1
+		else
+			LastSession.time=0
+		end
+		if ba>10 then
+			LastSession.score=LastSession.score+LastSession.multi*5
+			Sound(6,35,5)
+			ba=0
+		end
+	end
+
+	local achieve=false
+	local e=Factory.null
+
+	return function(s)
+		if GLOBAL.HIGH<=LastSession.score then
+			local tw=print(LastSession.score,W,H)
+			Factory:waveStr('NEW!', Vectic.new(W/2+30+tw,H/2-10),30,5,2,3)
+			GLOBAL.HIGH=LastSession.score
+			if not achieve then
+				achieve=true
+				Factory:delayCall('socore-explode',function ()
+					e=CreateExplode(Vectic.new(W/2,H/2-20))
+				end,30)
+				Sound(0,20,10)
+			end
+		end
+		e()
+		if slct==nil then
+			slct=CreateSelection(s, bs, fs)
+			ba=0
+			e=Factory.null
+			achieve=false
+		end
+		addBonus()
+		showScore()
+		slct.drw(s)
+	end
+end
+
 GameRun=function()
 	---@type NumberEntity
 	local target={
@@ -695,26 +800,42 @@ GameRun=function()
 		CPrint(target.n,target.vec.x,target.vec.y,4)
 	end
 
-	OpCtrl:setDiff()
-	NumCtrl:setDiff()
-	Controls:setup()
-	Controls.nxt_in=NumCtrl
+	local start_new=true
+	local can_play=true
+	local time_start=F
 
 	---@param s Game
 	local function endGame()
+		if score>pmem(0) then
+			pmem(0,score)
+		end
+		LastSession.score=score
+		LastSession.time=(F-time_start)
+		tmax=DIFFS[GLOBAL.DIFFICULTY].time
+		time_start=F
+		start_new=true
 		score=0
-		tmax=tmax-DIFFS[DIFFICULTY].speedup
 		timer=tmax
 		c=6
+		LastSession.multi=1
 		Controls:reset()
 		target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
+		Controls.nxt_in=NumCtrl
+		can_play=false
+		Factory:delayCall('can-play-again',function()can_play=true end,20)
 	end
+
 
 	---@param s Game
 	return function(s)
+		if start_new then
+			time_start=F
+			Controls:setup()
+			start_new=false
+		end
 		Controls.target_ref=target
 		local time_taken=tmax-timer
-		local pts=(tmax*(1+#Controls.hist)/(time_taken+2))-2
+		local pts=LastSession.multi*#Controls.hist*2
 		if pts<1 then pts=1 end
 		if Controls.result.n==target.n then
 			Factory:delayCall('explode-sfx', 
@@ -724,14 +845,19 @@ GameRun=function()
 				Factory:shake(target,10,5)
 				score=math.floor(score+pts)
 				Controls.hist={}
+				tmax=tmax-DIFFS[GLOBAL.DIFFICULTY].speedup
 				timer=tmax
 				c=5
+				LastSession.multi=LastSession.multi+1
 				target.n=NumCtrl:outputUsing(OpCtrl:rndOp())
 				Controls:reset()
 			end, 10)
 		end
 		Controls:drw()
-		Controls:run(tostring(target.n))
+		if can_play then
+			Controls:run(tostring(target.n))
+		end
+		-- print(Controls.hist[#Controls.hist], W/2, 3*H/4)
 		Screen:update()
 		if (timer%200==0) and c~=2 then c=c-1 end
 		if not GLOBAL.JUICE then c=13 end
