@@ -71,28 +71,29 @@ end
 DIFFS={
 	easy={
 		title='easy',
-		time=1200,
-		speedup=0,
+		time=2000,
+		speedup=10,
 		range={min=1,max=9},
-		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum)
+		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum),
+		next='medium'
 	},
 	medium={
 		title='medium',
-		time=1000,
-		speedup=1,
-		range={min=1,max=9},
-		operations=GenOps(BaseOps.mul,BaseOps.sub,BaseOps.sum,BaseOps.div)
+		time=1600,
+		speedup=50,
+		range={min=-9,max=9},
+		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum),
+		next='hard'
 	},
 	hard={
 		title='hard',
-		time=900,
-		speedup=1,
+		time=1000,
+		speedup=100,
 		range={min=-9,max=9},
-		operations=GenOps(BaseOps.mul,BaseOps.sub,BaseOps.sum,BaseOps.div)
+		operations=GenOps(BaseOps.mul,BaseOps.sub,BaseOps.sum,BaseOps.div),
+		next='easy'
 	}
 }
-
-DIFFICULTY='medium'
 
 ---@alias frames number
 ---@alias spr fun(id:number,x:number,y:number,colorkey?:number,scale?:number,flip?:number,rotate?:number,w?:number,h?:number)
