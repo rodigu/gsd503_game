@@ -1,6 +1,6 @@
--- title:   game title
--- author:  game developer, email, etc.
--- desc:    short description
+-- title:   MaTIC
+-- author:  Rodrigo
+-- desc:    Arcade math worksheet game
 -- site:    website link
 -- license: MIT License (change this to your license of choice)
 -- version: 0.1
