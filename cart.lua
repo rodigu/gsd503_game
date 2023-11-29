@@ -321,6 +321,40 @@ Factory={
 	---@param t number
 	delayCall=function(s,n,f,t)
 		s:add(n,t,s.null,f)
+	end,
+	---@param s Factory
+	---@param str string
+	---@param pos Vectic position
+	---@param t integer duration
+	---@param freq integer wave frequency
+	---@param hei number wave height
+	---@param col number color
+	waveStr=function(s,str,pos,t,freq,hei,col,sc,fix)
+		if not sc then sc=1 end
+		local start=F
+		---@param mod integer modifier
+		local sin=function(mod)
+			return math.sin((F-start+mod)/freq)*hei
+		end
+
+		s:add('wave-'..str, t, function ()
+			local dist=0
+			for i=1,#str do
+				local c=str:sub(i,i)
+				local wid=print(c,-W,-H,1,fix,sc)
+				local m=sin(dist)
+				if not GLOBAL.JUICE then
+					col=12
+					m=0
+				end
+				print(c,pos.x+dist,pos.y+m,col,fix,sc)
+				dist=dist+wid
+				i=i+1
+			end
+		end,
+		function ()
+			
+		end)
 	end
 }
 
