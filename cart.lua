@@ -930,6 +930,21 @@ ButtonFuncs={
 	end
 }
 
+KEYMAP={
+	PAD={
+		left=2,
+		right=3,
+		up=0,
+		down=1
+	},
+	FACE={
+		left=6,
+		right=5,
+		up=7,
+		down=4
+	}
+}
+
 ---@class BaseCtrl:Entity
 BaseCtrl={
 	---@type {[direction]: number}
@@ -995,7 +1010,7 @@ BaseCtrl={
 	end,
 	---@param s BaseCtrl
 	drw=function(s)
-		for d,b in pairs(s.btns) do
+		for _,b in pairs(s.btns) do
 			s:drwBtn(b)
 		end
 	end,
@@ -1015,7 +1030,7 @@ BaseCtrl={
 		if btn=='up' or btn=='down' then xy='y' end
 		local dir_mod=2
 		if btn=='left' or btn=='up' then dir_mod=-1 end
-		Factory:pushTo(s,7,xy,dir_mod,.2)
+		Factory:pushTo(s,7,xy,dir_mod,2,10)
 		return s.btns[btn]
 	end,
 	---@param s OpCtrl|NumCtrl
@@ -1035,25 +1050,16 @@ BaseCtrl={
 ---@class OpCtrl:BaseCtrl
 OpCtrl={
 	name='operations-control',
-	kp_map={
-		left=10,
-		right=12,
-		up=9,
-		down=11
-	},
-	bp_map={
-		left=6,
-		right=5,
-		up=7,
-		down=4
-	},
+	kp_map=KEYMAP.PAD,
+	bp_map=KEYMAP.FACE,
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:Operation} Control directions (up down left right)
 	dirs={up=BaseOps.mul,down=BaseOps.div,left=BaseOps.sub,right=BaseOps.sum},
 	---@param s OpCtrl
-	setDiff=function(s)
-		s.dirs=DIFFS[DIFFICULTY].operations
+	---@param diff string
+	setDiff=function(s,diff)
+		s.dirs=DIFFS[diff].operations
 	end,
 	---@param s OpCtrl
 	setup=function(s)
@@ -1077,25 +1083,15 @@ OpCtrl={
 	---@param s OpCtrl
 	rndOp=function(s)
 		local d=DIRS[math.random(1,3)]
-		return DIFFS[DIFFICULTY].operations[d].f
+		return DIFFS[GLOBAL.DIFFICULTY].operations[d].f
 	end
 }
 
 ---@class NumCtrl:BaseCtrl
 NumCtrl={
 	name='numeric-control',
-	kp_map={
-		left=6,
-		right=8,
-		up=20,
-		down=7
-	},
-	bp_map={
-		left=2,
-		right=3,
-		up=0,
-		down=1
-	},
+	kp_map=KEYMAP.FACE,
+	bp_map=KEYMAP.PAD,
 	---@type {[direction]:Button} Pressed buttons
 	btns={},
 	---@type {[direction]:number} Control directions (up down left right)
@@ -1109,8 +1105,9 @@ NumCtrl={
 	},
 	drw=BaseCtrl.drw,
 	---@param s NumCtrl
-	setDiff=function(s)
-		local r=DIFFS[DIFFICULTY].range
+	---@param diff string
+	setDiff=function(s, diff)
+		local r=DIFFS[diff].range
 		for n,_ in pairs(s.ranges) do
 			s.ranges[n]={min=r.min,max=r.max}
 		end
@@ -1223,7 +1220,7 @@ Controls={
 	---@param target string
 	hndl_input=function(s, target)
 		for d,_ in pairs(s.nums.dirs) do
-			if s.nxt_in:check_press(d) then
+			if btnp(KEYMAP.PAD[d]) or btnp(KEYMAP.FACE[d]) then
 				if s.nxt_in.btns[d].c==target then
 					local x,y=s.nxt_in:get_btn_pos(d)
 					s:_btn_press(d)
@@ -1285,11 +1282,15 @@ Controls={
 		else s.nxt_in=s.nums end
 	end,
 	---@param s Controls
-	setup=function(s)
+	setup=function(s,diff)
 		s.nums.vec=Vectic.new(s.vec.x - W/3,s.vec.y)
 		s.ops.vec=Vectic.new(s.vec.x + W/3,s.vec.y)
-		s.ops:setup()
-		s.nums:setup()
+
+		NumCtrl:setup()
+		NumCtrl:setDiff(GLOBAL.DIFFICULTY)
+		OpCtrl:setup()
+		OpCtrl:setDiff(GLOBAL.DIFFICULTY)
+
 		for d,_ in pairs(s.nums.dirs) do
 			s.nums:reGen(d)
 		end
@@ -1320,7 +1321,9 @@ Game={
 	end,
 	states={
 		menu=GameMenu(),
-		runGame=GameRun()
+		runGame=GameRun(),
+		settings=GameSettings(),
+		gameOver=GameOver()
 	},
 	---@type fun(s:Game)
 	currentState=nil,
@@ -1339,7 +1342,7 @@ Game={
 		local dur=30
 		Factory:add('transition',dur/2+1,
 		function()
-			rect(0,0,w,H,14)
+			rect(0,0,w,H,15)
 			w=w+(W/(dur/2))
 		end,
 		function()
@@ -1347,7 +1350,7 @@ Game={
 		end)
 		Factory:add('detransition',dur,
 		function()
-			rect(x,0,w,H,14)
+			rect(x,0,w,H,15)
 			x=x+(W/(dur/2))
 		end,
 		Factory.null,
