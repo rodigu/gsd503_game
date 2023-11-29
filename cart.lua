@@ -626,7 +626,8 @@ GameSettings=function()
 	return function(s)
 		if slct==nil then slct=CreateSelection(s, bs, fs) end
 		slct.drw(s)
-		-- CPrint('Menu song: Bella Ciao',W/2,H/2+20,12)
+		CPrint('Use arrow keys to control on a keyboard',W/2,H/2+15,12,true,1,true)
+		CPrint('Use d-pad and face buttons on a controller',W/2,H/2+25,12,true,1,true)
 	end
 end
 
@@ -874,10 +875,11 @@ GameRun=function()
 	end
 end
 
-CPrint=function(t,x,y,c)
-	local w=print(t,W,H)
+CPrint=function(t,x,y,c,fixed,scale,small)
+	local w=print(t,W,H,c,fixed,scale,small)
+	if not scale then scale=1 end
 	if not GLOBAL.JUICE and c~=15 then c=12 end
-	return print(t,x-w/2,y,c)
+	return print(t,x-w/2,y,c,fixed,scale,small)
 end
 
 
@@ -1369,14 +1371,10 @@ function pal(c0,c1)
 Game:setup()
 
 -- <TILES>
--- 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
--- 002:ccccceee8888cceeaaaa0cee888a0ceeccca0ccc0cca0c0c0cca0c0c0cca0c0c
--- 003:eccccccccc888888caaaaaaaca888888cacccccccacccccccacc0ccccacc0ccc
--- 004:ccccceee8888cceeaaaa0cee888a0ceeccca0cccccca0c0c0cca0c0c0cca0c0c
--- 017:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
--- 018:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
--- 019:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
--- 020:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
+-- 001:0cccccccc0000000c000000cc00000ccc0000cccc000ccccc00000ccc00000cc
+-- 002:cccccc00000000c0000000c0c00000c0cc0000c0ccc000c0c00000c0c00000c0
+-- 017:c00000ccc00000ccc00000ccc00000ccc0000000c00000000ccccccc00000000
+-- 018:c00000c0c00000c0c00000c0c00000c0000000c0000000c0cccccc0000000000
 -- </TILES>
 
 -- <SPRITES>
