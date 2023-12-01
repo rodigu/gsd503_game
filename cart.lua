@@ -876,8 +876,8 @@ GameRun=function()
 end
 
 CPrint=function(t,x,y,c,fixed,scale,small)
-	local w=print(t,W,H,c,fixed,scale,small)
 	if not scale then scale=1 end
+	local w=print(t,W,H,c,fixed,scale,small)
 	if not GLOBAL.JUICE and c~=15 then c=12 end
 	return print(t,x-w/2,y,c,fixed,scale,small)
 end
