@@ -8,7 +8,7 @@
 
 GLOBAL={
 	JUICE=true,
-	DIFFICULTY='medium',
+	DIFFICULTY='easy',
 	HIGH=0,
 	VOL=8
 }
@@ -71,8 +71,8 @@ end
 DIFFS={
 	easy={
 		title='easy',
-		time=2000,
-		speedup=10,
+		time=200000,
+		speedup=1,
 		range={min=1,max=9},
 		operations=GenOps(BaseOps.sub,BaseOps.sub,BaseOps.sum,BaseOps.sum),
 		next='medium'
@@ -826,11 +826,12 @@ GameRun=function()
 		Factory:delayCall('can-play-again',function()can_play=true end,20)
 	end
 
-
 	---@param s Game
 	return function(s)
 		if start_new then
 			time_start=F
+			tmax=DIFFS[GLOBAL.DIFFICULTY].time
+			timer=tmax
 			Controls:setup()
 			start_new=false
 		end
@@ -860,7 +861,7 @@ GameRun=function()
 		end
 		-- print(Controls.hist[#Controls.hist], W/2, 3*H/4)
 		Screen:update()
-		if (timer%200==0) and c~=2 then c=c-1 end
+		-- if (((100*timer)//tmax)%20==0) and c~=2 then c=c-1 end
 		if not GLOBAL.JUICE then c=13 end
 		rect(0,0,W*timer/tmax,10,c)
 		rectb(0,0,W,10,12)
